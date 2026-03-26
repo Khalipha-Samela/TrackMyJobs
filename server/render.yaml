@@ -4,12 +4,12 @@ services:
     runtime: node
     repo: https://github.com/Khalipha-Samela/TrackMyJobs.git
     plan: free
-    preDeployCommand: "node server/setup-render-db.js"
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    preDeployCommand: cd server && node setup-render-db.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 5000
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL
@@ -18,6 +18,10 @@ services:
         fromDatabase:
           name: trackmyjobs-db
           property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: trackmyjobs-db
+          property: port
       - key: DB_USER
         fromDatabase:
           name: trackmyjobs-db
@@ -30,8 +34,6 @@ services:
         fromDatabase:
           name: trackmyjobs-db
           property: database
-      - key: DB_PORT
-        value: 5432
 
 databases:
   - name: trackmyjobs-db
