@@ -4,16 +4,16 @@ services:
     runtime: node
     repo: https://github.com/Khalipha-Samela/TrackMyJobs.git
     plan: free
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
-    preDeployCommand: cd server && node setup-render-db.js
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL
-        sync: false
+        value: https://track-myjobs.netlify.app
       - key: DB_HOST
         fromDatabase:
           name: trackmyjobs-db
