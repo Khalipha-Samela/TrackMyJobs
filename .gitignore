@@ -29,3 +29,5 @@ server/uploads/
 # Logs
 logs/
 *.log
+# Local Netlify folder
+.netlify
