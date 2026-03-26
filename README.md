@@ -90,9 +90,14 @@ TrackMyJobs
 │        └─ index.css
 ├─ database
 │  ├─ sample-data.sql
-│  └─ schema.sql
+│  └─ schema-postgres.sql
+├─ deploy.sh
+├─ images
+│  └─ dashboard.png
+├─ netlify.toml
 ├─ package-lock.json
 ├─ package.json
+├─ README.md
 └─ server
    ├─ config
    │  ├─ database.js
@@ -100,7 +105,7 @@ TrackMyJobs
    ├─ controllers
    │  ├─ applicationController.js
    │  └─ authController.js
-   ├─ create-admin.js
+   ├─ create-demo.js
    ├─ middleware
    │  ├─ auth.js
    │  └─ rateLimiter.js
@@ -109,11 +114,12 @@ TrackMyJobs
    │  └─ User.js
    ├─ package-lock.json
    ├─ package.json
+   ├─ render.yaml
    ├─ routes
    │  ├─ applicationRoutes.js
    │  └─ authRoutes.js
    ├─ server.js
-   └─ setup-db.js
+   └─ setup-render-db.js
 
 ```
 
@@ -395,4 +401,5 @@ npm install
 3. Commit your changes ```(git commit -m 'Add some AmazingFeature')```
 4. Push to the branch ```(git push origin feature/AmazingFeature)```
 5. Open a Pull Request
+
 
