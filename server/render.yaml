@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: trackmyjobs-api
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: trackmyjobs-db
+          property: host
+      - key: DB_USER
+        fromDatabase:
+          name: trackmyjobs-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: trackmyjobs-db
+          property: password
+      - key: DB_NAME
+        value: trackmyjobs
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://your-netlify-app.netlify.app
+
+databases:
+  - name: trackmyjobs-db
+    databaseName: trackmyjobs
+    user: trackmyjobs_user
