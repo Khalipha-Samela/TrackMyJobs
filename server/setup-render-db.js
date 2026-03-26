@@ -16,18 +16,17 @@ async function setupRenderDatabase() {
     ssl: { rejectUnauthorized: false }
   };
   
-  console.log(' Database Config:');
+  console.log('📊 Database Config:');
   console.log(`   Host: ${dbConfig.host}`);
   console.log(`   Database: ${dbConfig.database}`);
   console.log(`   User: ${dbConfig.user}`);
-  console.log(`   Environment: ${process.env.NODE_ENV}`);
   
   const pool = new Pool(dbConfig);
   
   try {
     // Test connection
     await pool.query('SELECT NOW()');
-    console.log('Connected to PostgreSQL');
+    console.log(' Connected to PostgreSQL');
     
     // Check if tables exist
     const { rows: tables } = await pool.query(`
@@ -106,46 +105,148 @@ async function setupRenderDatabase() {
           FOR EACH ROW 
           EXECUTE FUNCTION update_updated_at_column()
     `);
-    console.log(' Updated_at trigger created');
+    console.log('✅ Updated_at trigger created');
     
-    // Create demo user
-    console.log('\n Creating/updating demo user...');
-    const hashedPassword = bcrypt.hashSync('changeme123', 10);
+    // ============ ADD SAMPLE DATA ============
+    console.log('\n Adding sample data from your SQL file...');
     
+    // Insert demo user (with your provided hash)
     await pool.query(
       `INSERT INTO users (email, password_hash, display_name) 
        VALUES ($1, $2, $3) 
        ON CONFLICT (email) DO UPDATE 
        SET password_hash = EXCLUDED.password_hash,
            display_name = EXCLUDED.display_name`,
-      ['demo@trackmyjobs.com', hashedPassword, 'Demo User']
+      ['demo@trackmyjobs.com', '$2b$10$6QzQu1gh87jj.wgJ/VxPBOECJCEo6NV7DAywXe3TEP4lRsgIPLRXW', 'Demo User']
     );
-    console.log(' Demo user created/updated');
+    console.log(' Demo user created');
     
-    // Verify setup
-    console.log('\n Database Verification:');
+    // Get demo user ID
+    const { rows: demoUser } = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      ['demo@trackmyjobs.com']
+    );
+    const demoUserId = demoUser[0].id;
     
+    // Check if sample applications already exist
+    const { rows: existingApps } = await pool.query(
+      'SELECT COUNT(*) FROM applications WHERE user_id = $1',
+      [demoUserId]
+    );
+    
+    if (parseInt(existingApps[0].count) === 0) {
+      console.log(' Inserting sample applications...');
+      
+      // Insert sample applications (converted from your MySQL data)
+      const sampleApps = [
+        {
+          company: 'Google',
+          title: 'Frontend Developer',
+          link: 'https://careers.google.com/jobs/123',
+          days_ago: 5,
+          status: 'Interview',
+          notes: 'Had initial phone screen. Technical interview scheduled for next week.'
+        },
+        {
+          company: 'Microsoft',
+          title: 'React Developer',
+          link: 'https://careers.microsoft.com/jobs/456',
+          days_ago: 10,
+          status: 'Applied',
+          notes: 'Application submitted. Waiting for response.'
+        },
+        {
+          company: 'Amazon',
+          title: 'Frontend Engineer',
+          link: 'https://amazon.jobs/789',
+          days_ago: 15,
+          status: 'Rejected',
+          notes: 'Got rejection after technical assessment.'
+        },
+        {
+          company: 'Apple',
+          title: 'UI Developer',
+          link: 'https://apple.com/jobs/321',
+          days_ago: 20,
+          status: 'Offer',
+          notes: 'Received offer! Negotiating salary.'
+        },
+        {
+          company: 'Netflix',
+          title: 'Senior React Developer',
+          link: 'https://netflix.com/jobs/654',
+          days_ago: 25,
+          status: 'Interview',
+          notes: 'Second round interview completed. Waiting for feedback.'
+        },
+        {
+          company: 'Meta',
+          title: 'Software Engineer',
+          link: 'https://meta.com/jobs/987',
+          days_ago: 30,
+          status: 'Applied',
+          notes: 'Application submitted through referral.'
+        }
+      ];
+      
+      for (const app of sampleApps) {
+        await pool.query(
+          `INSERT INTO applications 
+           (user_id, company_name, job_title, job_link, application_date, status, notes)
+           VALUES ($1, $2, $3, $4, CURRENT_DATE - INTERVAL '1 day' * $5, $6, $7)`,
+          [demoUserId, app.company, app.title, app.link, app.days_ago, app.status, app.notes]
+        );
+      }
+      
+      console.log(` Added ${sampleApps.length} sample applications for demo user`);
+    } else {
+      console.log(' Sample applications already exist, skipping...');
+    }
+    
+    // Show statistics
+    console.log('\n📊 Database Statistics:');
     const { rows: userCount } = await pool.query('SELECT COUNT(*) FROM users');
     console.log(`   Users: ${userCount[0].count}`);
     
     const { rows: appCount } = await pool.query('SELECT COUNT(*) FROM applications');
     console.log(`   Applications: ${appCount[0].count}`);
     
-    const { rows: tableList } = await pool.query(`
-      SELECT tablename FROM pg_tables 
-      WHERE schemaname = 'public'
+    const { rows: statusStats } = await pool.query(`
+      SELECT status, COUNT(*) as count 
+      FROM applications 
+      GROUP BY status 
+      ORDER BY status
     `);
-    console.log(`   Tables: ${tableList.map(t => t.tablename).join(', ')}`);
+    console.log('\n   Applications by status:');
+    statusStats.forEach(stat => {
+      console.log(`   - ${stat.status}: ${stat.count}`);
+    });
+    
+    const { rows: recentApps } = await pool.query(`
+      SELECT company_name, job_title, status, application_date 
+      FROM applications 
+      WHERE user_id = $1 
+      ORDER BY application_date DESC 
+      LIMIT 5
+    `, [demoUserId]);
+    
+    console.log('\n   Recent applications:');
+    recentApps.forEach(app => {
+      console.log(`   - ${app.company_name}: ${app.job_title} (${app.status})`);
+    });
     
     console.log('\n🎉 Database Setup Complete!');
     console.log('\n=================================');
-    console.log('LOGIN CREDENTIALS:');
-    console.log('Email: demo@trackmyjobs.com');
-    console.log('Password: changeme123');
+    console.log(' LOGIN CREDENTIALS:');
+    console.log('Demo Email: demo@trackmyjobs.com');
+    console.log('Demo Password: changeme123');
+    console.log('=================================');
+    console.log('\n Sample data included:');
+    console.log('   - Demo user with 6 sample applications');
     console.log('=================================');
     
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error(' Error:', error.message);
     console.error('Stack:', error.stack);
   } finally {
     await pool.end();
