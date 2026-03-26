@@ -2,7 +2,7 @@
 
 A modern, full-stack job application tracking system that helps you manage and monitor your job search journey. Track applications, upload CVs, and visualize your progress with a sleek neo-brutalist interface.
 
-![TrackMyJobs Demo](/TrackMyJobs/images/dashboard.png)
+![TrackMyJobs Demo](images/dashboard.png)
 
 ---
 
