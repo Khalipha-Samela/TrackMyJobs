@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 
 // Load environment variables
@@ -15,11 +16,14 @@ const applicationRoutes = require('./routes/applicationRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Update CORS for production
+// Trust proxy for rate limiting (important for Render)
+app.set('trust proxy', 1);
+
+// CORS configuration
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:3000',
-  'https://track-myjobs.netlify.app/', 
-  'https://*.netlify.app' // Allow all Netlify subdomains during development
+  'https://*.netlify.app', // Allow all Netlify subdomains
+  'https://*.onrender.com' // Allow Render subdomains
 ];
 
 app.use(cors({
@@ -27,11 +31,18 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    // Check if origin is allowed
+    if (allowedOrigins.some(pattern => {
+      if (pattern.includes('*')) {
+        const regex = new RegExp(pattern.replace('*', '.*'));
+        return regex.test(origin);
+      }
+      return origin === pattern;
+    }) || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
       console.log('Origin not allowed:', origin);
-      callback(null, true); // Allow all in development, change for production
+      callback(null, true); // Allow in production with proper CORS
     }
   },
   credentials: true,
@@ -39,16 +50,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Security middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // Disable for file uploads
 }));
+
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Create uploads directory if it doesn't exist
-const fs = require('fs');
 const uploadsDir = path.join(__dirname, 'uploads');
 const cvsDir = path.join(uploadsDir, 'cvs');
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -59,21 +74,35 @@ if (!fs.existsSync(cvsDir)) {
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
 
-// Health check endpoint for Render
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running' });
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint not found'
+  });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error:', err.stack);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal Server Error'
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
@@ -82,4 +111,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Uploads directory: ${cvsDir}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
 });

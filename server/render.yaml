@@ -1,12 +1,18 @@
 services:
   - type: web
     name: trackmyjobs-api
-    env: node
-    buildCommand: npm install
-    startCommand: npm start
+    runtime: node
+    repo: https://github.com/Khalipha-Samela/TrackMyJobs.git
+    plan: free
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false
       - key: DB_HOST
         fromDatabase:
           name: trackmyjobs-db
@@ -20,13 +26,14 @@ services:
           name: trackmyjobs-db
           property: password
       - key: DB_NAME
-        value: trackmyjobs
-      - key: JWT_SECRET
-        generateValue: true
-      - key: CLIENT_URL
-        value: https://your-netlify-app.netlify.app
+        fromDatabase:
+          name: trackmyjobs-db
+          property: database
+      - key: DB_PORT
+        value: 5432
 
 databases:
   - name: trackmyjobs-db
     databaseName: trackmyjobs
     user: trackmyjobs_user
+    plan: free
