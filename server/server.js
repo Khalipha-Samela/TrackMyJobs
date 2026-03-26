@@ -19,41 +19,52 @@ const PORT = process.env.PORT || 5000;
 // Trust proxy for rate limiting (important for Render)
 app.set('trust proxy', 1);
 
-// CORS configuration
+// Configure CORS properly
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:3000',
-  'https://*.netlify.app', // Allow all Netlify subdomains
-  'https://*.onrender.com' // Allow Render subdomains
-];
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://track-myjobs.netlify.app',
+  'https://*.netlify.app',
+  process.env.CLIENT_URL
+].filter(Boolean);
 
-app.use(cors({
+// CORS options
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     
     // Check if origin is allowed
-    if (allowedOrigins.some(pattern => {
-      if (pattern.includes('*')) {
-        const regex = new RegExp(pattern.replace('*', '.*'));
-        return regex.test(origin);
-      }
-      return origin === pattern;
-    }) || process.env.NODE_ENV === 'development') {
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
-      console.log('Origin not allowed:', origin);
-      callback(null, true); // Allow in production with proper CORS
+      // For Netlify preview deployments, allow any netlify.app subdomain
+      if (origin.match(/\.netlify\.app$/)) {
+        callback(null, true);
+      } else {
+        console.log('❌ CORS blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Disposition'],
+  optionsSuccessStatus: 200
+};
 
-// Security middleware
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
+// Security middleware (adjust for CORS)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: false // Disable for file uploads
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  contentSecurityPolicy: false
 }));
 
 // Body parsing middleware
@@ -74,13 +85,22 @@ if (!fs.existsSync(cvsDir)) {
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Health check endpoint for Render
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     message: 'Server is running',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
+  });
+});
+
+// Debug endpoint to check CORS
+app.get('/api/cors-test', (req, res) => {
+  res.json({ 
+    message: 'CORS is working!', 
+    origin: req.headers.origin,
+    headers: req.headers
   });
 });
 
@@ -111,5 +131,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Uploads directory: ${cvsDir}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+  console.log(`🔗 Allowed origins:`, allowedOrigins);
 });
