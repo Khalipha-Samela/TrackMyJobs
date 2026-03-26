@@ -4,6 +4,7 @@ services:
     runtime: node
     repo: https://github.com/Khalipha-Samela/TrackMyJobs.git
     plan: free
+    preDeployCommand: "node server/setup-render-db.js"
     envVars:
       - key: NODE_ENV
         value: production
