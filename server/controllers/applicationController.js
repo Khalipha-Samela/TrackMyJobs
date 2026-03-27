@@ -10,28 +10,44 @@ class ApplicationController {
     const offset = (page - 1) * limit;
 
     try {
-      const [applications, total, stats] = await Promise.all([
-        Application.getAll(req.user.id, offset, limit),
-        Application.count(req.user.id),
-        Application.getStats(req.user.id)
-      ]);
+      console.log('Fetching applications for user:', req.user.id);
+    
+      const { data, count } = await Application.getAll(req.user.id, offset, limit);
+      const stats = await Application.getStats(req.user.id);
+      const total = await Application.count(req.user.id);
 
+      // Ensure data is an array
+      const applications = Array.isArray(data) ? data : [];
+    
+      console.log(`Found ${applications.length} applications out of ${total} total`);
+      console.log('First application sample:', applications[0]);
+
+      // Return clean structure - applications array directly
       res.json({
         success: true,
-        data: applications,
+        data: applications,  // Direct array, not nested
         pagination: {
           page,
           limit,
-          total,
-          totalPages: Math.ceil(total / limit)
+          total: total || 0,
+          totalPages: Math.ceil((total || 0) / limit)
         },
-        stats
+        stats: stats || {
+          total: 0,
+          applied: 0,
+          interview: 0,
+          rejected: 0,
+          offer: 0
+        }
       });
     } catch (error) {
       console.error('Error fetching applications:', error);
       res.status(500).json({
         success: false,
-        message: 'Error fetching applications'
+        message: 'Error fetching applications: ' + error.message,
+        data: [],
+        pagination: { total: 0, totalPages: 1 },
+        stats: { total: 0, applied: 0, interview: 0, rejected: 0, offer: 0 }
       });
     }
   }

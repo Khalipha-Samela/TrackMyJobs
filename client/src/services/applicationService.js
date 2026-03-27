@@ -1,7 +1,7 @@
 import api from './api';
 
 export const applicationService = {
-  async getAll(page = 1, limit = 5) {
+   async getAll(page = 1, limit = 5) {
     try {
       console.log('Fetching applications for page:', page);
       const response = await api.get('/applications', {
@@ -9,22 +9,20 @@ export const applicationService = {
       });
       console.log('Raw API response:', response.data);
       
-      // The API response structure is: 
-      // { success: true, data: { data: [...], count: 5 }, pagination: {...}, stats: {...} }
-      // We need to extract the actual applications array from response.data.data
-      
       let applications = [];
       let pagination = { total: 0, totalPages: 1 };
       let stats = { total: 0, applied: 0, interview: 0, rejected: 0, offer: 0 };
       
       if (response.data) {
-        // Extract applications - handle both possible structures
+        // The applications array might be in different places depending on backend response
         if (response.data.data && Array.isArray(response.data.data)) {
+          // Case 1: data is directly an array
           applications = response.data.data;
+        } else if (response.data.data && response.data.data.data && Array.isArray(response.data.data.data)) {
+          // Case 2: data has nested data array (from your backend)
+          applications = response.data.data.data;
         } else if (Array.isArray(response.data.data)) {
           applications = response.data.data;
-        } else if (Array.isArray(response.data)) {
-          applications = response.data;
         }
         
         // Extract pagination
