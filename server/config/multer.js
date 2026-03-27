@@ -8,7 +8,12 @@ const storage = multer.diskStorage({
     cb(null, path.join(__dirname, '../uploads/cvs'));
   },
   filename: (req, file, cb) => {
+    // Generate unique filename for storage
     const uniqueName = `${uuidv4()}_${Date.now()}${path.extname(file.originalname)}`;
+    // Store the original name in the request body to be saved in database
+    req.body.cv_original_name = file.originalname;
+    req.body.cv_mime_type = file.mimetype;
+    req.body.cv_size = file.size;
     cb(null, uniqueName);
   }
 });
