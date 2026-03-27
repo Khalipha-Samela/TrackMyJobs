@@ -2,7 +2,7 @@ services:
   - type: web
     name: trackmyjobs-api
     runtime: node
-    repo: https://github.com/Khalipha-Samela/TrackMyJobs.git
+    repo: https://github.com/Khalipha-Samela/TrackMyJobs
     plan: free
     buildCommand: npm run build
     startCommand: npm start
@@ -13,29 +13,7 @@ services:
         generateValue: true
       - key: CLIENT_URL
         value: https://track-myjobs.netlify.app
-      - key: DB_HOST
-        fromDatabase:
-          name: trackmyjobs-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: trackmyjobs-db
-          property: port
-      - key: DB_USER
-        fromDatabase:
-          name: trackmyjobs-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: trackmyjobs-db
-          property: password
-      - key: DB_NAME
-        fromDatabase:
-          name: trackmyjobs-db
-          property: database
-
-databases:
-  - name: trackmyjobs-db
-    databaseName: trackmyjobs
-    user: trackmyjobs_user
-    plan: free
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
