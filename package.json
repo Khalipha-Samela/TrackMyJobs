@@ -1,17 +1,14 @@
 {
-  "name": "job-tracker-server",
+  "name": "trackmyjobs",
   "version": "1.0.0",
-  "description": "Job Application Tracker Backend API",
-  "main": "server.js",
+  "description": "Job Application Tracker",
   "scripts": {
     "start": "cd server && node server.js",
     "build": "cd server && npm install",
-    "dev": "cd server && npm run dev"
+    "dev": "cd server && npm run dev",
+    "setup-db": "cd server && node setup-render-db.js"
   },
   "engines": {
     "node": "18.x"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }
