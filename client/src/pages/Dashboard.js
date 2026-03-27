@@ -10,30 +10,32 @@ import {
   FaTrash, 
   FaFileDownload,
   FaExternalLinkAlt,
-  FaLayerGroup,
-  FaPaperPlane,
-  FaComments,
+  FaBriefcase,
+  FaChartLine,
+  FaCalendarAlt,
+  FaCheckCircle,
+  FaClock,
   FaTimesCircle,
   FaTrophy,
-  FaBriefcase,
-  FaListAlt,
-  FaClipboardList
+  FaSearch,
+  FaFilter,
+  FaChevronLeft,
+  FaChevronRight
 } from 'react-icons/fa';
 import { useAuth } from '../hooks/useAuth';
-import Pagination from '../components/Pagination';
-import StatusBadge from '../components/StatusBadge';
-import DateBadge from '../components/DateBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const Dashboard = () => {
   const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const { logout } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['applications', page],
-    queryFn: () => applicationService.getAll(page, 5),
+    queryFn: () => applicationService.getAll(page, 10),
     retry: 1,
   });
 
@@ -49,7 +51,7 @@ const Dashboard = () => {
   });
 
   const handleDelete = (id, companyName) => {
-    if (window.confirm(`Are you sure you want to delete application for "${companyName}"? This action cannot be undone.`)) {
+    if (window.confirm(`Delete application for "${companyName}"? This action cannot be undone.`)) {
       deleteMutation.mutate(id);
     }
   };
@@ -60,7 +62,6 @@ const Dashboard = () => {
       await applicationService.downloadCV(id);
       toast.success(`Downloaded: ${originalName}`, { id: 'download' });
     } catch (error) {
-      console.error('Download error:', error);
       toast.error('Failed to download CV', { id: 'download' });
     }
   };
@@ -70,27 +71,21 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '';
-    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
-    if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return bytes + ' bytes';
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) {
-    console.error('Dashboard error:', error);
-    return (
-      <div className="error-container">
-        <h2>Error loading applications</h2>
-        <p>{error.message}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
-    );
-  }
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'Applied': return { bg: '#EFF6FF', text: '#1E40AF', dot: '#3B82F6' };
+      case 'Interview': return { bg: '#FEF3C7', text: '#92400E', dot: '#F59E0B' };
+      case 'Rejected': return { bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444' };
+      case 'Offer': return { bg: '#ECFDF5', text: '#065F46', dot: '#10B981' };
+      default: return { bg: '#F3F4F6', text: '#374151', dot: '#6B7280' };
+    }
+  };
 
-  // Safely extract data with fallbacks
   const applications = data?.data || [];
   const pagination = data?.pagination || { total: 0, totalPages: 1 };
   const stats = data?.stats || {
@@ -101,188 +96,243 @@ const Dashboard = () => {
     offer: 0
   };
 
-  console.log('Applications array:', applications);
-  console.log('Applications is array?', Array.isArray(applications));
-  console.log('Applications length:', applications.length);
+  // Filter applications based on search and status
+  const filteredApplications = applications.filter(app => {
+    const matchesSearch = searchTerm === '' || 
+      app.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job_title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>Error loading applications</h2>
+        <p>{error.message}</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="container">
-      <header className="header">
-        <h1>
-          <FaBriefcase />
-          TRACKMYJOBS
-        </h1>
-        <p>TRACK YOUR JOB SEARCH WITH BOLD, UNAPOLOGETIC CLARITY</p>
+    <div className="dashboard-container">
+      {/* Header */}
+      <header className="dashboard-header">
+        <div className="header-content">
+          <div className="logo-section">
+            <div className="logo-icon">
+              <FaBriefcase />
+            </div>
+            <div className="logo-text">
+              <h1>TrackMyJobs</h1>
+              <p>Job Application Tracker</p>
+            </div>
+          </div>
+          <button className="logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt />
+            <span>Logout</span>
+          </button>
+        </div>
       </header>
+
+      {/* Welcome Section */}
+      <div className="welcome-section">
+        <h2>Welcome back! 👋</h2>
+        <p>Track and manage all your job applications in one place</p>
+      </div>
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon"><FaLayerGroup /></div>
-          <div className="stat-number">{stats.total || 0}</div>
-          <div className="stat-label">Total Applications</div>
+        <div className="stat-card total">
+          <div className="stat-icon">
+            <FaBriefcase />
+          </div>
+          <div className="stat-info">
+            <h3>{stats.total}</h3>
+            <p>Total Applications</p>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon"><FaPaperPlane /></div>
-          <div className="stat-number">{stats.applied || 0}</div>
-          <div className="stat-label">Applied</div>
+        <div className="stat-card applied">
+          <div className="stat-icon">
+            <FaClock />
+          </div>
+          <div className="stat-info">
+            <h3>{stats.applied}</h3>
+            <p>Applied</p>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon"><FaComments /></div>
-          <div className="stat-number">{stats.interview || 0}</div>
-          <div className="stat-label">In Interview</div>
+        <div className="stat-card interview">
+          <div className="stat-icon">
+            <FaCalendarAlt />
+          </div>
+          <div className="stat-info">
+            <h3>{stats.interview}</h3>
+            <p>Interview</p>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon"><FaTimesCircle /></div>
-          <div className="stat-number">{stats.rejected || 0}</div>
-          <div className="stat-label">Rejected</div>
+        <div className="stat-card rejected">
+          <div className="stat-icon">
+            <FaTimesCircle />
+          </div>
+          <div className="stat-info">
+            <h3>{stats.rejected}</h3>
+            <p>Rejected</p>
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon"><FaTrophy /></div>
-          <div className="stat-number">{stats.offer || 0}</div>
-          <div className="stat-label">Offers Received</div>
+        <div className="stat-card offer">
+          <div className="stat-icon">
+            <FaTrophy />
+          </div>
+          <div className="stat-info">
+            <h3>{stats.offer}</h3>
+            <p>Offers</p>
+          </div>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="main-actions">
-        <button className="btn btn-primary" onClick={() => navigate('/add')}>
-          <FaPlus /> ADD NEW APPLICATION
+      {/* Actions Bar */}
+      <div className="actions-bar">
+        <button className="btn-primary" onClick={() => navigate('/add')}>
+          <FaPlus /> Add New Application
         </button>
-        <button className="btn btn-secondary" onClick={handleLogout}>
-          <FaSignOutAlt /> LOGOUT
-        </button>
+        
+        <div className="filters">
+          <div className="search-box">
+            <FaSearch />
+            <input
+              type="text"
+              placeholder="Search by company or position..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <select 
+            className="status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="Applied">Applied</option>
+            <option value="Interview">Interview</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Offer">Offer</option>
+          </select>
+        </div>
       </div>
 
-      {/* Applications Table */}
-      <div className="applications-container">
-        <div className="table-header">
-          <h2><FaListAlt /> YOUR APPLICATIONS</h2>
-          <div className="count-badge">{pagination.total || 0} RECORDS</div>
+      {/* Applications Grid */}
+      <div className="applications-grid">
+        <div className="grid-header">
+          <h3>Your Applications</h3>
+          <span>{filteredApplications.length} applications</span>
         </div>
-
-        {applications.length === 0 ? (
+        
+        {filteredApplications.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon"><FaClipboardList /></div>
-            <h3>NO APPLICATIONS FOUND</h3>
-            <p>Your job search dashboard is empty. Start tracking your applications to see them here.</p>
-            <button className="btn btn-primary" onClick={() => navigate('/add')}>
-              <FaPlus /> ADD YOUR FIRST APPLICATION
+            <div className="empty-icon">
+              <FaBriefcase />
+            </div>
+            <h3>No applications found</h3>
+            <p>Start tracking your job applications by adding your first one</p>
+            <button className="btn-primary" onClick={() => navigate('/add')}>
+              <FaPlus /> Add Application
             </button>
           </div>
         ) : (
-          <>
-            <div className="applications-table-wrapper">
-              <table className="applications-table">
-                <thead>
-                  <tr>
-                    <th>COMPANY & POSITION</th>
-                    <th>DATE APPLIED</th>
-                    <th>STATUS</th>
-                    <th>CV / RESUME</th>
-                    <th>NOTES</th>
-                    <th>ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {applications.map((app, index) => (
-                    <tr key={app.id} style={{ '--row-index': index }}>
-                      <td className="company-cell" data-label="Company & Position">
-                        <div className="company-name">{app.company_name}</div>
-                        <div className="job-title">{app.job_title}</div>
-                        {app.job_link && (
-                          <a href={app.job_link} target="_blank" rel="noopener noreferrer" className="job-link">
-                            <FaExternalLinkAlt /> VIEW JOB POSTING
-                          </a>
-                        )}
-                      </td>
-                      <td data-label="Date Applied">
-                        <DateBadge date={app.application_date} />
-                      </td>
-                      <td data-label="Status">
-                        <StatusBadge status={app.status} />
-                      </td>
-                      <td data-label="CV / Resume">
-                        {app.cv_filename ? (
-                          <div className="cv-container">
-                            <button 
-                              className="cv-badge"
-                              onClick={() => handleDownload(app.id, app.cv_original_name)}
-                            >
-                              <FaFileDownload />
-                              <span>
-                                {app.cv_original_name?.length > 20 
-                                  ? app.cv_original_name.substring(0, 20) + '...' 
-                                  : app.cv_original_name}
-                              </span>
-                            </button>
-                            <div className="cv-size">
-                              {app.cv_size ? formatFileSize(app.cv_size) : ''}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="no-cv">
-                            <FaTimesCircle /> No CV uploaded
-                          </div>
-                        )}
-                      </td>
-                      <td data-label="Notes">
-                        <div className="notes-container">
-                          {app.notes ? (
-                            <>
-                              <div>{app.notes.substring(0, 80)}</div>
-                              {app.notes.length > 80 && (
-                                <button 
-                                  className="btn-icon-view"
-                                  onClick={() => navigate(`/edit/${app.id}#notes`)}
-                                >
-                                  VIEW FULL NOTE
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <div className="no-notes">No notes added</div>
-                          )}
-                        </div>
-                      </td>
-                      <td data-label="Actions">
-                        <div className="action-buttons">
-                          <button 
-                            className="btn-icon btn-icon-edit"
-                            onClick={() => navigate(`/edit/${app.id}`)}
-                            title="Edit Application"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button 
-                            className="btn-icon btn-icon-delete"
-                            onClick={() => handleDelete(app.id, app.company_name)}
-                            title="Delete Application"
-                          >
-                            <FaTrash />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {pagination.totalPages > 1 && (
-              <Pagination
-                currentPage={page}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.total}
-                onPageChange={setPage}
-              />
-            )}
-          </>
+          <div className="applications-list">
+            {filteredApplications.map((app) => {
+              const statusStyle = getStatusColor(app.status);
+              return (
+                <div key={app.id} className="application-card">
+                  <div className="card-header">
+                    <div className="company-info">
+                      <h4>{app.company_name}</h4>
+                      <p>{app.job_title}</p>
+                    </div>
+                    <div className="status-badge" style={{ background: statusStyle.bg, color: statusStyle.text }}>
+                      <span className="status-dot" style={{ background: statusStyle.dot }}></span>
+                      {app.status}
+                    </div>
+                  </div>
+                  
+                  <div className="card-details">
+                    <div className="detail-item">
+                      <FaCalendarAlt />
+                      <span>Applied: {formatDate(app.application_date)}</span>
+                    </div>
+                    {app.job_link && (
+                      <a href={app.job_link} target="_blank" rel="noopener noreferrer" className="detail-link">
+                        <FaExternalLinkAlt />
+                        <span>View Job Posting</span>
+                      </a>
+                    )}
+                  </div>
+                  
+                  {app.notes && (
+                    <div className="card-notes">
+                      <p>{app.notes.length > 120 ? app.notes.substring(0, 120) + '...' : app.notes}</p>
+                    </div>
+                  )}
+                  
+                  <div className="card-actions">
+                    {app.cv_filename && (
+                      <button 
+                        className="action-btn download"
+                        onClick={() => handleDownload(app.id, app.cv_original_name)}
+                        title="Download CV"
+                      >
+                        <FaFileDownload />
+                        <span>CV</span>
+                      </button>
+                    )}
+                    <button 
+                      className="action-btn edit"
+                      onClick={() => navigate(`/edit/${app.id}`)}
+                      title="Edit"
+                    >
+                      <FaEdit />
+                      <span>Edit</span>
+                    </button>
+                    <button 
+                      className="action-btn delete"
+                      onClick={() => handleDelete(app.id, app.company_name)}
+                      title="Delete"
+                    >
+                      <FaTrash />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
-      </div>
-
-      <div className="footer-note">
-        <p><strong>TRACK. APPLY. SUCCEED.</strong> • Page {page} of {pagination.totalPages || 1} • {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+        
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="pagination">
+            <button 
+              className="page-btn"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
+              <FaChevronLeft /> Previous
+            </button>
+            <span className="page-info">
+              Page {page} of {pagination.totalPages}
+            </span>
+            <button 
+              className="page-btn"
+              onClick={() => setPage(page + 1)}
+              disabled={page === pagination.totalPages}
+            >
+              Next <FaChevronRight />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
