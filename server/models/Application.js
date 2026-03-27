@@ -2,15 +2,32 @@ const supabase = require('../config/supabase');
 
 class Application {
   static async getAll(userId, offset = 0, limit = 10) {
-    const { data, error, count } = await supabase
-      .from('applications')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .order('application_date', { ascending: false })
-      .range(offset, offset + limit - 1);
+    try {
+      console.log('Application.getAll called with:', { userId, offset, limit });
     
-    if (error) throw error;
-    return { data, count };
+      const { data, error, count } = await supabase
+        .from('applications')
+        .select('*', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('application_date', { ascending: false })
+        .range(offset, offset + limit - 1);
+    
+      if (error) {
+        console.error('Supabase error in getAll:', error);
+        throw error;
+      }
+    
+      console.log(`Found ${data?.length || 0} applications, total count: ${count || 0}`);
+    
+      // Return data as array directly
+      return { 
+        data: data || [], 
+        count: count || 0 
+      };
+    } catch (error) {
+      console.error('Error in Application.getAll:', error);
+      throw error;
+    }
   }
 
   static async getById(id, userId) {
