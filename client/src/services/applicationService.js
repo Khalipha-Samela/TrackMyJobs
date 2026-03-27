@@ -7,13 +7,44 @@ export const applicationService = {
       const response = await api.get('/applications', {
         params: { page, limit }
       });
-      console.log('Applications response:', response.data);
+      console.log('Raw API response:', response.data);
       
-      // Ensure we always return the expected structure
+      // The API response structure is: 
+      // { success: true, data: { data: [...], count: 5 }, pagination: {...}, stats: {...} }
+      // We need to extract the actual applications array from response.data.data
+      
+      let applications = [];
+      let pagination = { total: 0, totalPages: 1 };
+      let stats = { total: 0, applied: 0, interview: 0, rejected: 0, offer: 0 };
+      
+      if (response.data) {
+        // Extract applications - handle both possible structures
+        if (response.data.data && Array.isArray(response.data.data)) {
+          applications = response.data.data;
+        } else if (Array.isArray(response.data.data)) {
+          applications = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          applications = response.data;
+        }
+        
+        // Extract pagination
+        if (response.data.pagination) {
+          pagination = response.data.pagination;
+        }
+        
+        // Extract stats
+        if (response.data.stats) {
+          stats = response.data.stats;
+        }
+      }
+      
+      console.log('Extracted applications array:', applications);
+      console.log('Applications count:', applications.length);
+      
       return {
-        data: response.data.data || [],
-        pagination: response.data.pagination || { total: 0, totalPages: 1 },
-        stats: response.data.stats || { total: 0, applied: 0, interview: 0, rejected: 0, offer: 0 }
+        data: applications,
+        pagination: pagination,
+        stats: stats
       };
     } catch (error) {
       console.error('Error fetching applications:', error);
