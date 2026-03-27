@@ -33,7 +33,9 @@ const Dashboard = () => {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['applications', page],
-    queryFn: () => applicationService.getAll(page, 5)
+    queryFn: () => applicationService.getAll(page, 5),
+    // Add this to handle errors gracefully
+    retry: 1,
   });
 
   const deleteMutation = useMutation({
@@ -59,6 +61,7 @@ const Dashboard = () => {
       await applicationService.downloadCV(id);
       toast.success(`Downloaded: ${originalName}`, { id: 'download' });
     } catch (error) {
+      console.error('Download error:', error);
       toast.error('Failed to download CV', { id: 'download' });
     }
   };
@@ -77,11 +80,29 @@ const Dashboard = () => {
   };
 
   if (isLoading) return <LoadingSpinner />;
-  if (error) return <div className="error-message">Error loading applications</div>;
+  if (error) {
+    console.error('Dashboard error:', error);
+    return (
+      <div className="error-container">
+        <h2>Error loading applications</h2>
+        <p>{error.message}</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
 
+  // Safely extract data with fallbacks
   const applications = data?.data || [];
-  const pagination = data?.pagination || {};
-  const stats = data?.stats || {};
+  const pagination = data?.pagination || { total: 0, totalPages: 1 };
+  const stats = data?.stats || {
+    total: 0,
+    applied: 0,
+    interview: 0,
+    rejected: 0,
+    offer: 0
+  };
+
+  console.log('Dashboard data:', { applications, pagination, stats });
 
   return (
     <div className="container">
@@ -194,7 +215,9 @@ const Dashboard = () => {
                                   : app.cv_original_name}
                               </span>
                             </button>
-                            <div className="cv-size">{app.cv_size ? formatFileSize(app.cv_size) : ''}</div>
+                            <div className="cv-size">
+                              {app.cv_size ? formatFileSize(app.cv_size) : ''}
+                            </div>
                           </div>
                         ) : (
                           <div className="no-cv">
