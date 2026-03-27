@@ -17,10 +17,23 @@ class AuthController {
 
     try {
       console.log('Login attempt for email:', email);
-      
-      // Find user by email
-      const user = await User.findByEmail(email);
-      
+    
+      // Find user by email using Supabase
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email);
+    
+      if (userError) {
+        console.error('Supabase error:', userError);
+        return res.status(500).json({
+          success: false,
+          message: 'Database error'
+        });
+      }
+    
+      const user = users?.[0];
+    
       if (!user) {
         console.log('User not found:', email);
         return res.status(401).json({
@@ -30,8 +43,8 @@ class AuthController {
       }
 
       // Verify password
-      const isValidPassword = await User.validatePassword(password, user.password_hash);
-      
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    
       if (!isValidPassword) {
         console.log('Invalid password for user:', email);
         return res.status(401).json({
@@ -40,15 +53,16 @@ class AuthController {
         });
       }
 
-      // Generate JWT token
+      // Generate JWT token with the correct user ID
       const token = jwt.sign(
         { id: user.id, email: user.email, displayName: user.display_name },
-        JWT_SECRET,
+        process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
 
       console.log('Login successful for user:', email);
-      
+      console.log('User ID in token:', user.id);
+    
       res.json({
         success: true,
         token,
@@ -59,7 +73,7 @@ class AuthController {
         }
       });
     } catch (error) {
-      console.error('Login error details:', error);
+      console.error('Login error:', error);
       res.status(500).json({
         success: false,
         message: 'Server error during login: ' + error.message
