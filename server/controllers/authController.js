@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');  // Add this line - it was missing!
 const User = require('../models/User');
 const { JWT_SECRET } = require('../middleware/auth');
 const { validationResult } = require('express-validator');
@@ -43,7 +44,7 @@ class AuthController {
         });
       }
 
-      // Verify password
+      // Verify password - bcrypt is now properly imported
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
       if (!isValidPassword) {
