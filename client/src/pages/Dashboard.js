@@ -34,7 +34,6 @@ const Dashboard = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['applications', page],
     queryFn: () => applicationService.getAll(page, 5),
-    // Add this to handle errors gracefully
     retry: 1,
   });
 
@@ -102,7 +101,9 @@ const Dashboard = () => {
     offer: 0
   };
 
-  console.log('Dashboard data:', { applications, pagination, stats });
+  console.log('Applications array:', applications);
+  console.log('Applications is array?', Array.isArray(applications));
+  console.log('Applications length:', applications.length);
 
   return (
     <div className="container">
