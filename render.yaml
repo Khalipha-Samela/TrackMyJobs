@@ -4,9 +4,8 @@ services:
     runtime: node
     repo: https://github.com/Khalipha-Samela/TrackMyJobs.git
     plan: free
-    rootDir: server
-    buildCommand: npm install
-    startCommand: node server.js
+    buildCommand: npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
