@@ -39,7 +39,7 @@ const corsOptions = {
       callback(null, true);
     } else {
       // For Netlify preview deployments, allow any netlify.app subdomain
-      if (origin.match(/\.netlify\.app$/)) {
+      if (origin && origin.match(/\.netlify\.app$/)) {
         callback(null, true);
       } else {
         console.log('❌ CORS blocked origin:', origin);
@@ -77,25 +77,38 @@ const cvsDir = path.join(uploadsDir, 'cvs');
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('📁 Created uploads directory');
 }
 if (!fs.existsSync(cvsDir)) {
   fs.mkdirSync(cvsDir, { recursive: true });
+  console.log('📁 Created cvs directory');
 }
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Health check endpoint
+// Health check endpoint for Render
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     message: 'Server is running',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// Debug endpoint to check CORS
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'TrackMyJobs API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: ['/api/auth', '/api/applications', '/health']
+  });
+});
+
+// Debug endpoint to test CORS
 app.get('/api/cors-test', (req, res) => {
   res.json({ 
     message: 'CORS is working!', 
@@ -126,10 +139,24 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  process.exit(0);
+});
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📁 Uploads directory: ${cvsDir}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Allowed origins:`, allowedOrigins);
+  console.log(`🔗 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+  console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✓ Set' : '✗ Missing'}`);
+  console.log(`📊 Database: ${process.env.DB_NAME || 'trackmyjobs'}`);
+  console.log(`\n✅ Ready to accept requests\n`);
 });
