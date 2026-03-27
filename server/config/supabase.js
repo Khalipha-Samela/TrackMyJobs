@@ -8,13 +8,13 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing Supabase credentials!');
-  console.log('Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in environment variables');
+  console.log('SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing');
+  console.log('SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? 'Set' : 'Missing');
+} else {
+  console.log('✅ Supabase credentials found');
+  console.log('URL:', supabaseUrl);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-console.log('📊 Supabase Configuration:');
-console.log(`   URL: ${supabaseUrl}`);
-console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
 
 module.exports = supabase;

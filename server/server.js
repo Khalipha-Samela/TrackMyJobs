@@ -11,6 +11,7 @@ dotenv.config();
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
+const supabase = require('./config/supabase');
 
 // Initialize express app
 const app = express();
@@ -93,8 +94,7 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     message: 'Server is running',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    supabase_configured: !!supabase
   });
 });
 
