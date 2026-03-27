@@ -56,15 +56,19 @@ class ApplicationController {
     const { id } = req.params;
 
     try {
-      const application = await Application.getById(id, req.user.id);
-      
+      console.log('Fetching application by ID:', id, 'for user:', req.user.id);
+    
+      const application = await Application.getById(parseInt(id), req.user.id);
+    
       if (!application) {
+        console.log('Application not found for ID:', id);
         return res.status(404).json({
           success: false,
           message: 'Application not found'
         });
       }
 
+      console.log('Application found:', application.id);
       res.json({
         success: true,
         data: application
@@ -73,7 +77,7 @@ class ApplicationController {
       console.error('Error fetching application:', error);
       res.status(500).json({
         success: false,
-        message: 'Error fetching application'
+        message: 'Error fetching application: ' + error.message
       });
     }
   }

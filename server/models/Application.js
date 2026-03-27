@@ -4,58 +4,161 @@ class Application {
   static async getAll(userId, offset = 0, limit = 10) {
     try {
       console.log('Application.getAll - User ID:', userId);
-      console.log('Application.getAll - Offset:', offset, 'Limit:', limit);
-    
+      
       const { data, error, count } = await supabase
         .from('applications')
         .select('*', { count: 'exact' })
         .eq('user_id', userId)
         .order('application_date', { ascending: false })
         .range(offset, offset + limit - 1);
-    
+      
       if (error) {
         console.error('Supabase error in getAll:', error);
         throw error;
       }
-    
-      console.log(`Found ${data?.length || 0} applications, total count: ${count || 0}`);
-    
-      // Log the actual data to see what's coming back
-      if (data && data.length > 0) {
-        console.log('Sample application:', JSON.stringify(data[0], null, 2));
-      } else {
-        console.log('No applications found for user:', userId);
       
-        // Let's check if the user exists in the users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-      
-        console.log('User exists in database?', userData ? 'Yes' : 'No');
-        if (userError) console.log('User lookup error:', userError);
-      
-        // Let's check if there are ANY applications in the table
-        const { data: allApps, error: allAppsError } = await supabase
-          .from('applications')
-          .select('*')
-          .limit(5);
-      
-        console.log('Any applications in table?', allApps?.length || 0);
-        if (allApps && allApps.length > 0) {
-          console.log('Sample application from table:', allApps[0]);
-          console.log('User ID in that application:', allApps[0].user_id);
-          console.log('Looking for user ID:', userId);
-        }
-      }
-    
       return { 
         data: data || [], 
         count: count || 0 
       };
     } catch (error) {
       console.error('Error in Application.getAll:', error);
+      throw error;
+    }
+  }
+
+  static async getById(id, userId) {
+    try {
+      console.log('Application.getById - ID:', id, 'User ID:', userId);
+      
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .maybeSingle();  // Use maybeSingle instead of single to avoid errors when not found
+      
+      if (error) {
+        console.error('Supabase error in getById:', error);
+        throw error;
+      }
+      
+      console.log('Application found:', data ? 'Yes' : 'No');
+      return data;
+    } catch (error) {
+      console.error('Error in Application.getById:', error);
+      throw error;
+    }
+  }
+
+  static async create(data, userId) {
+    try {
+      const {
+        company_name,
+        job_title,
+        job_link,
+        application_date,
+        status,
+        notes,
+        cv_filename,
+        cv_original_name,
+        cv_mime_type,
+        cv_size
+      } = data;
+
+      const { data: result, error } = await supabase
+        .from('applications')
+        .insert([{
+          user_id: userId,
+          company_name,
+          job_title,
+          job_link: job_link || null,
+          application_date,
+          status: status || 'Applied',
+          notes: notes || null,
+          cv_filename: cv_filename || null,
+          cv_original_name: cv_original_name || null,
+          cv_mime_type: cv_mime_type || null,
+          cv_size: cv_size || null
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return result.id;
+    } catch (error) {
+      console.error('Error in create:', error);
+      throw error;
+    }
+  }
+
+  static async update(id, userId, data) {
+    try {
+      const {
+        company_name,
+        job_title,
+        job_link,
+        application_date,
+        status,
+        notes,
+        cv_filename,
+        cv_original_name,
+        cv_mime_type,
+        cv_size
+      } = data;
+
+      const updateData = {
+        company_name,
+        job_title,
+        job_link: job_link || null,
+        application_date,
+        status,
+        notes: notes || null,
+        updated_at: new Date().toISOString()
+      };
+
+      if (cv_filename !== undefined) updateData.cv_filename = cv_filename;
+      if (cv_original_name !== undefined) updateData.cv_original_name = cv_original_name;
+      if (cv_mime_type !== undefined) updateData.cv_mime_type = cv_mime_type;
+      if (cv_size !== undefined) updateData.cv_size = cv_size;
+
+      const { error } = await supabase
+        .from('applications')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error in update:', error);
+      throw error;
+    }
+  }
+
+  static async delete(id, userId) {
+    try {
+      // Get CV filename first
+      const { data: app } = await supabase
+        .from('applications')
+        .select('cv_filename')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      const cvFilename = app?.cv_filename;
+      
+      // Delete application
+      const { error } = await supabase
+        .from('applications')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      return { success: true, cvFilename };
+    } catch (error) {
+      console.error('Error in delete:', error);
       throw error;
     }
   }
@@ -77,7 +180,6 @@ class Application {
         offer: data?.filter(a => a.status === 'Offer').length || 0
       };
       
-      console.log('Stats calculated:', stats);
       return stats;
     } catch (error) {
       console.error('Error in getStats:', error);
