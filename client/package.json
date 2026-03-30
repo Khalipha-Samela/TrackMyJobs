@@ -1,6 +1,7 @@
 {
   "name": "job-tracker-client",
   "version": "1.0.0",
+  "homepage": "https://track-myjobs.netlify.app",
   "private": true,
   "dependencies": {
     "@tanstack/react-query": "^4.43.0",
