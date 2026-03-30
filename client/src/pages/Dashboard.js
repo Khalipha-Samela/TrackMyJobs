@@ -24,8 +24,10 @@ import Pagination from '../components/Pagination';
 import StatusBadge from '../components/StatusBadge';
 import DateBadge from '../components/DateBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
+import useTitle from '../hooks/useTitle';
 
 const Dashboard = () => {
+  useTitle('TrackMyJobs - Dashboard');
   const [page, setPage] = useState(1);
   const { logout } = useAuth();
   const navigate = useNavigate();

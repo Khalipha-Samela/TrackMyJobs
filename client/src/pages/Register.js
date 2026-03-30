@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { use, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fa';
 
 const Register = () => {
+  useTitle('TrackMyJobs - Register');
   const [formData, setFormData] = useState({
     display_name: '',
     email: '',

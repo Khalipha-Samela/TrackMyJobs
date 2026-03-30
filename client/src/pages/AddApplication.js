@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { use, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { applicationService } from '../services/applicationService';
@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fa';
 
 const AddApplication = () => {
+  useTitle('TrackMyJobs - Add Application');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({

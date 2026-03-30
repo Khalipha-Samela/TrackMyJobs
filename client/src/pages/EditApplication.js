@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { applicationService } from '../services/applicationService';
@@ -21,6 +21,7 @@ import {
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const EditApplication = () => {
+  useTitle('TrackMyJobs - Edit Application');
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

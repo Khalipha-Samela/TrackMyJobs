@@ -3,8 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { FaBriefcase, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaRocket } from 'react-icons/fa';
+import useTitle from '../hooks/useTitle';
 
 const Login = () => {
+  useTitle('TrackMyJobs - Login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
