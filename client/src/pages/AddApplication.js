@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { applicationService } from '../services/applicationService';
 import toast from 'react-hot-toast';
+import useTitle from '../hooks/useTitle';
 import { 
   FaArrowLeft, 
   FaSave, 

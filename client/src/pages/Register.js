@@ -2,6 +2,7 @@ import React, { use, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
+import useTitle from '../hooks/useTitle';
 import { 
   FaBriefcase, 
   FaEnvelope, 
