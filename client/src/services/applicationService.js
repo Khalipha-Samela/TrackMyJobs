@@ -62,26 +62,53 @@ export const applicationService = {
 
   async create(data, file) {
     console.log('Creating application with data:', data);
-    
+    console.log('CV File:', file ? file.name : 'No file');
+  
     const formData = new FormData();
-    
+  
+    // Add all form fields
     Object.keys(data).forEach(key => {
       if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
         formData.append(key, data[key]);
       }
     });
-    
+  
+    // Add file if present
     if (file) {
       formData.append('cv_file', file);
     }
-    
+  
     try {
-      const response = await api.post('/applications', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const token = localStorage.getItem('token');
+    
+      // Create an AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
+      const response = await fetch('https://trackmyjobs-api.onrender.com/api/applications', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+        signal: controller.signal
       });
-      return response.data;
+    
+      clearTimeout(timeoutId);
+    
+      const responseData = await response.json();
+    
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to create application');
+      }
+    
+      console.log('✅ Application created successfully:', responseData);
+      return responseData;
     } catch (error) {
-      console.error('Create error:', error);
+      console.error('❌ Create error:', error);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - file may be too large or server is slow');
+      }
       throw error;
     }
   },
