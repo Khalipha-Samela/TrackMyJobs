@@ -2,6 +2,7 @@ const Application = require('../models/Application');
 const fs = require('fs').promises;
 const path = require('path');
 const { validationResult } = require('express-validator');
+const { uploadToSupabase } = require('../config/supabase-storage');
 
 class ApplicationController {
   static async getAll(req, res) {
@@ -83,17 +84,14 @@ class ApplicationController {
   }
 
   static async create(req, res) {
-    console.log('\n========== CREATE APPLICATION ==========');
+    console.log('========== CREATE APPLICATION ==========');
     console.log('User ID:', req.user?.id);
     console.log('Request body:', req.body);
     console.log('File uploaded:', req.file ? req.file.originalname : 'No file');
-    
+  
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('Validation errors:', errors.array());
-      if (req.file) {
-        await fs.unlink(req.file.path).catch(console.error);
-      }
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -109,17 +107,31 @@ class ApplicationController {
       notes: req.body.notes || null
     };
 
+    // Upload CV to Supabase Storage if file exists
     if (req.file) {
-      applicationData.cv_filename = req.file.filename;
-      applicationData.cv_original_name = req.file.originalname;
-      applicationData.cv_mime_type = req.file.mimetype;
-      applicationData.cv_size = req.file.size;
+      try {
+        console.log('Uploading CV to Supabase...');
+        const cvData = await uploadToSupabase(req.file, req.user.id);
+        applicationData.cv_filename = cvData.filename;
+        applicationData.cv_original_name = cvData.original_name;
+        applicationData.cv_mime_type = cvData.mime_type;
+        applicationData.cv_size = cvData.size;
+        console.log('CV uploaded successfully:', cvData.filename);
+      } catch (error) {
+        console.error('CV upload error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload CV: ' + error.message
+        });
+      }
     }
 
     try {
       const id = await Application.create(applicationData, req.user.id);
+      console.log('Application created with ID:', id);
+    
       const newApplication = await Application.getById(id, req.user.id);
-      
+    
       res.status(201).json({
         success: true,
         data: newApplication,
@@ -127,9 +139,6 @@ class ApplicationController {
       });
     } catch (error) {
       console.error('Create error:', error);
-      if (req.file) {
-        await fs.unlink(req.file.path).catch(console.error);
-      }
       res.status(500).json({
         success: false,
         message: 'Error creating application: ' + error.message
@@ -262,55 +271,39 @@ class ApplicationController {
   }
 
   static async downloadCV(req, res) {
-  const { id } = req.params;
+    const { id } = req.params;
 
-  try {
-    const application = await Application.getById(id, req.user.id);
-    
-    if (!application || !application.cv_filename) {
-      return res.status(404).json({
-        success: false,
-        message: 'CV file not found'
-      });
-    }
-    
-    const cvPath = path.join(__dirname, '../uploads/cvs', application.cv_filename);
-    
-    // Check if file exists
     try {
-      await fs.access(cvPath);
-    } catch (err) {
-      return res.status(404).json({
+      console.log('Download CV request for application ID:', id);
+    
+      const application = await Application.getById(id, req.user.id);
+    
+      if (!application || !application.cv_filename) {
+        return res.status(404).json({
+          success: false,
+          message: 'CV file not found'
+        });
+      }
+
+      // Download from Supabase Storage
+      const fileBuffer = await downloadFromSupabase(application.cv_filename);
+    
+      const originalFileName = application.cv_original_name || 'cv.pdf';
+    
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(originalFileName)}"`);
+      res.setHeader('Content-Type', application.cv_mime_type || 'application/octet-stream');
+      res.setHeader('Content-Length', fileBuffer.length);
+    
+      res.send(fileBuffer);
+    
+    } catch (error) {
+      console.error('Download error:', error);
+      res.status(500).json({
         success: false,
-        message: 'CV file not found on server'
+        message: 'Error downloading CV: ' + error.message
       });
     }
-    
-    // Get the original filename and clean it for the download
-    let originalFileName = application.cv_original_name || 'cv.pdf';
-    
-    // Remove any path characters and ensure it's safe
-    originalFileName = path.basename(originalFileName);
-    
-    console.log(`📄 Downloading: ${originalFileName}`);
-    
-    // Set headers - use simple filename for download
-    res.setHeader('Content-Type', application.cv_mime_type || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${originalFileName}"`);
-    res.setHeader('Content-Length', application.cv_size);
-    
-    // Read and send the file
-    const fileBuffer = await fs.readFile(cvPath);
-    res.send(fileBuffer);
-    
-  } catch (error) {
-    console.error('Error downloading CV:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error downloading CV'
-    });
   }
-}
 }
 
 module.exports = ApplicationController;
