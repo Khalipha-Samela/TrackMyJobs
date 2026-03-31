@@ -123,33 +123,36 @@ const EditApplication = () => {
   };
 
   const handleRemoveCv = () => {
-    setRemoveCv(true);
-    setCvFile(null);
-    setFilePreview(null);
-  };
+      setRemoveCv(true);
+      setCvFile(null);
+      setFilePreview(null);
+    };
 
-  const getFileIcon = (type) => {
-    if (type === 'application/pdf') return <FaFilePdf />;
-    if (type?.includes('word')) return <FaFileWord />;
-    return <FaFile />;
-  };
+    const getFileIcon = (type) => {
+      if (type === 'application/pdf') return <FaFilePdf />;
+      if (type?.includes('word')) return <FaFileWord />;
+      return <FaFile />;
+    };
 
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '';
-    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
-    if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return bytes + ' bytes';
-  };
+    const formatFileSize = (bytes) => {
+      if (!bytes) return '';
+      if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+      if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+      if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+      return bytes + ' bytes';
+    };
 
-  const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.company_name.trim()) {
+  
+    console.log('Form data before submit:', formData);
+  
+    // Validation
+    if (!formData.company_name?.trim()) {
       toast.error('Company name is required');
       return;
     }
-    if (!formData.job_title.trim()) {
+    if (!formData.job_title?.trim()) {
       toast.error('Job title is required');
       return;
     }
@@ -157,14 +160,31 @@ const EditApplication = () => {
       toast.error('Application date is required');
       return;
     }
-    
-    // Prepare data for submission - ensure date is in correct format
+  
+    // Prepare data for submission - only include fields that have values
     const submitData = {
-      ...formData,
-      application_date: formData.application_date // Already in YYYY-MM-DD format
+      company_name: formData.company_name,
+      job_title: formData.job_title,
+      job_link: formData.job_link || null,
+      application_date: formData.application_date,
+      status: formData.status,
+      notes: formData.notes || null
     };
-    
-    mutation.mutate({ formData: submitData, file: cvFile, removeCv });
+  
+    console.log('Submitting update data:', submitData);
+    console.log('New CV file:', cvFile);
+    console.log('Remove CV:', removeCv);
+  
+    const loadingToast = toast.loading('Updating application...');
+  
+    try {
+      await applicationService.update(id, submitData, cvFile, removeCv);
+      toast.success('Application updated successfully!', { id: loadingToast });
+      navigate('/');
+    } catch (error) {
+      console.error('Update error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update application', { id: loadingToast });
+    }
   };
 
   const handleReset = () => {

@@ -102,10 +102,10 @@ export const applicationService = {
         throw new Error(responseData.message || 'Failed to create application');
       }
     
-      console.log('✅ Application created successfully:', responseData);
+      console.log(' Application created successfully:', responseData);
       return responseData;
     } catch (error) {
-      console.error('❌ Create error:', error);
+      console.error(' Create error:', error);
       if (error.name === 'AbortError') {
         throw new Error('Request timeout - file may be too large or server is slow');
       }
@@ -114,26 +114,69 @@ export const applicationService = {
   },
 
   async update(id, data, file, removeCv = false) {
+    console.log(`Updating application ${id} with data:`, data);
+    console.log('CV File:', file ? file.name : 'No file');
+    console.log('Remove CV:', removeCv);
+  
     const formData = new FormData();
+  
+    // Add all form fields - only add if they exist
     Object.keys(data).forEach(key => {
       if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+        console.log(`Adding to FormData: ${key} = ${data[key]}`);
         formData.append(key, data[key]);
       }
     });
+  
+    // Add file if present
     if (file) {
+      console.log(`Adding file to FormData: ${file.name}`);
       formData.append('cv_file', file);
     }
+  
+    // Add remove CV flag
     if (removeCv) {
+      console.log('Adding remove_cv flag: true');
       formData.append('remove_cv', 'true');
     }
-
+  
+    // Log all form data entries for debugging
+    console.log('FormData entries:');
+    for (let pair of formData.entries()) {
+      console.log(`   ${pair[0]}: ${pair[1]}`);
+    }
+  
     try {
-      const response = await api.put(`/applications/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const token = localStorage.getItem('token');
+    
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+      const response = await fetch(`https://trackmyjobs-api.onrender.com/api/applications/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+        signal: controller.signal
       });
-      return response.data;
+    
+      clearTimeout(timeoutId);
+    
+      const responseData = await response.json();
+    
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to update application');
+      }
+    
+      console.log(' Application updated successfully:', responseData);
+      return responseData;
     } catch (error) {
-      console.error('Update error:', error);
+      console.error(' Update error:', error);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - server took too long to respond');
+      }
       throw error;
     }
   },

@@ -148,11 +148,29 @@ class ApplicationController {
 
   static async update(req, res) {
     const { id } = req.params;
+    console.log('========== UPDATE APPLICATION ==========');
+    console.log('Application ID:', id);
+    console.log('User ID:', req.user?.id);
+    console.log('Request body:', req.body);
+    console.log('File uploaded:', req.file ? req.file.originalname : 'No file');
+  
+    // Set timeout for this request
+    const timeout = setTimeout(() => {
+      console.error('Update operation timed out');
+      if (!res.headersSent) {
+       res.status(504).json({ 
+          success: false, 
+          message: 'Request timeout - server took too long to respond' 
+        });
+      }
+    }, 25000);
+  
     const errors = validationResult(req);
-    
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
+      clearTimeout(timeout);
       if (req.file) {
-        await fs.unlink(req.file.path).catch(console.error);
+        // No file to clean up with memory storage
       }
       return res.status(400).json({
         success: false,
@@ -171,11 +189,10 @@ class ApplicationController {
 
     try {
       const existingApp = await Application.getById(id, req.user.id);
-      
+      console.log('Existing application found:', existingApp ? 'Yes' : 'No');
+    
       if (!existingApp) {
-        if (req.file) {
-          await fs.unlink(req.file.path).catch(console.error);
-        }
+        clearTimeout(timeout);
         return res.status(404).json({
           success: false,
           message: 'Application not found'
@@ -183,45 +200,67 @@ class ApplicationController {
       }
 
       const removeCv = req.body.remove_cv === 'true' || req.body.remove_cv === '1';
-      
+      console.log('Remove CV flag:', removeCv);
+    
       if (removeCv) {
         applicationData.cv_filename = null;
         applicationData.cv_original_name = null;
         applicationData.cv_mime_type = null;
         applicationData.cv_size = null;
-        
+      
+        // Delete from Supabase Storage if exists
         if (existingApp.cv_filename) {
-          const oldCvPath = path.join(__dirname, '../uploads/cvs', existingApp.cv_filename);
-          await fs.unlink(oldCvPath).catch(console.error);
+          try {
+            const { deleteFromSupabase } = require('../config/supabase-storage');
+            await deleteFromSupabase(existingApp.cv_filename);
+            console.log('Deleted CV from Supabase:', existingApp.cv_filename);
+          } catch (err) {
+            console.error('Error deleting from Supabase:', err);
+          }
         }
       }
 
+      // Handle new CV upload
       if (req.file) {
-        applicationData.cv_filename = req.file.filename;
-        applicationData.cv_original_name = req.file.originalname;
-        applicationData.cv_mime_type = req.file.mimetype;
-        applicationData.cv_size = req.file.size;
+        try {
+          const { uploadToSupabase } = require('../config/supabase-storage');
+          const cvData = await uploadToSupabase(req.file, req.user.id);
+          applicationData.cv_filename = cvData.filename;
+          applicationData.cv_original_name = cvData.original_name;
+          applicationData.cv_mime_type = cvData.mime_type;
+          applicationData.cv_size = cvData.size;
+          console.log('New CV uploaded:', cvData.filename);
         
-        if (existingApp.cv_filename && !removeCv) {
-          const oldCvPath = path.join(__dirname, '../uploads/cvs', existingApp.cv_filename);
-          await fs.unlink(oldCvPath).catch(console.error);
+          // Delete old CV if exists
+          if (existingApp.cv_filename && !removeCv) {
+            const { deleteFromSupabase } = require('../config/supabase-storage');
+            await deleteFromSupabase(existingApp.cv_filename);
+            console.log('Deleted old CV:', existingApp.cv_filename);
+          }
+        } catch (error) {
+          console.error('CV upload error:', error);
+          clearTimeout(timeout);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to upload CV: ' + error.message
+          });
         }
       }
 
       const updated = await Application.update(id, req.user.id, applicationData);
-      
+      console.log('Update result:', updated);
+    
       if (!updated) {
-        if (req.file) {
-          await fs.unlink(req.file.path).catch(console.error);
-        }
+        clearTimeout(timeout);
         return res.status(404).json({
           success: false,
           message: 'Application not found'
         });
       }
-      
+    
       const updatedApplication = await Application.getById(id, req.user.id);
-      
+    
+      clearTimeout(timeout);
       res.json({
         success: true,
         data: updatedApplication,
@@ -229,9 +268,7 @@ class ApplicationController {
       });
     } catch (error) {
       console.error('Update error:', error);
-      if (req.file) {
-        await fs.unlink(req.file.path).catch(console.error);
-      }
+      clearTimeout(timeout);
       res.status(500).json({
         success: false,
         message: 'Error updating application: ' + error.message
