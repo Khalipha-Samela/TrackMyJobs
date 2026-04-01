@@ -445,14 +445,23 @@ body {
 .status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 8px 16px;
+  justify-content: center;
+  padding: 6px 14px;
   border: var(--border-sm);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 1px;
   gap: 6px;
   transform: rotate(-1deg);
+  white-space: nowrap;
+  min-width: 90px;
+  transition: var(--transition);
+}
+
+.status-badge:hover {
+  transform: rotate(0deg) translate(-2px, -2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .status-applied { background: var(--info); color: var(--surface); }
@@ -488,9 +497,19 @@ body {
   color: var(--surface);
 }
 
+.btn-icon-edit:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-md);
+}
+
 .btn-icon-delete {
   background: var(--danger);
   color: var(--surface);
+}
+
+.btn-icon-delete:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-md);
 }
 
 /* Form */
@@ -1044,7 +1063,9 @@ body {
   .delete-confirm {
     padding: var(--spacing-lg);
   }
-}/* Existing CV Styles */
+}
+
+/* Existing CV Styles */
 .existing-cv {
   background: var(--surface);
   border: var(--border-md);
