@@ -16,12 +16,20 @@ const api = axios.create({
 const sanitizeData = (data) => {
   if (!data || typeof data !== 'object') return data;
   
+  // Handle FormData (file uploads)
+  if (data instanceof FormData) {
+    return '[FormData]';
+  }
+  
   const sanitized = { ...data };
   if (sanitized.password) {
     sanitized.password = '********';
   }
   if (sanitized.confirmPassword) {
     sanitized.confirmPassword = '********';
+  }
+  if (sanitized.newPassword) {
+    sanitized.newPassword = '********';
   }
   return sanitized;
 };
@@ -36,7 +44,15 @@ api.interceptors.request.use(
     
     // Log only in development, and sanitize sensitive data
     if (isDevelopment) {
-      const logData = config.data ? sanitizeData(config.data) : undefined;
+      let logData = config.data;
+      
+      // Handle different data types
+      if (config.data instanceof FormData) {
+        logData = '[FormData]';
+      } else if (config.data && typeof config.data === 'object') {
+        logData = sanitizeData(config.data);
+      }
+      
       console.log(`📤 ${config.method.toUpperCase()} ${config.url}`, logData);
     }
     
