@@ -7,7 +7,7 @@
   REACT_APP_SUPABASE_URL = "https://mxfyfjirrqwkwuwswosv.supabase.co"
   REACT_APP_SUPABASE_ANON_KEY = "${SUPABASE_ANON_KEY}"
   REACT_APP_API_URL = "https://trackmyjobs-api.onrender.com/api"
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
 
 [[redirects]]
   from = "/api/*"
