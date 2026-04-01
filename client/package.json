@@ -4,6 +4,7 @@
   "homepage": "https://track-myjobs.netlify.app",
   "private": true,
   "dependencies": {
+    "@supabase/supabase-js": "^2.101.1",
     "@tanstack/react-query": "^4.43.0",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
