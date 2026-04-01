@@ -1,0 +1,10 @@
+// Disable console logs in production
+if (process.env.NODE_ENV === 'production') {
+  const noop = () => {};
+  console.log = noop;
+  console.warn = noop;
+  console.info = noop;
+  console.debug = noop;
+  // Keep console.error for debugging
+  // console.error = noop; // Uncomment to disable errors too
+}
