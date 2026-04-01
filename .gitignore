@@ -8,6 +8,7 @@ yarn-error.log*
 .env
 .env.local
 .env.production
+server/.env
 
 # Uploaded files (keep the folder structure)
 server/uploads/cvs/*
