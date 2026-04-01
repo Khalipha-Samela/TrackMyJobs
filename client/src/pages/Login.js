@@ -13,7 +13,6 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Demo credentials
   const demoCredentials = {
     email: 'demo@trackmyjobs.com',
     password: 'changeme123'
@@ -33,7 +32,7 @@ const Login = () => {
       toast.success('Login successful!');
       navigate('/');
     } catch (error) {
-      const message = error.message || 'Login failed';
+      const message = error.response?.data?.message || error.message || 'Login failed';
       toast.error(message);
     } finally {
       setLoading(false);
@@ -72,7 +71,6 @@ const Login = () => {
 
           <div className="auth-divider"></div>
 
-          {/* Demo Button */}
           <button 
             className="demo-btn" 
             onClick={handleDemoLogin}

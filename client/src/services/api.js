@@ -1,48 +1,65 @@
 import axios from 'axios';
 
-// Get the API URL from environment variables or use the Render URL
 const API_URL = process.env.REACT_APP_API_URL || 'https://trackmyjobs-api.onrender.com/api';
 
-console.log('API URL:', API_URL);
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 30000,
 });
 
-// Request interceptor to add token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    console.log(`📤 ${config.method.toUpperCase()} ${config.url}`, config.data);
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// Only log in development
+if (isDevelopment) {
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      console.log(`📤 ${config.method.toUpperCase()} ${config.url}`);
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => {
-    console.log(`📥 ${response.status} ${response.config.url}`);
-    return response;
-  },
-  (error) => {
-    console.error('API Error:', error.response?.status, error.response?.data);
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+  api.interceptors.response.use(
+    (response) => {
+      console.log(`📥 ${response.status} ${response.config.url}`);
+      return response;
+    },
+    (error) => {
+      console.error('API Error:', error.response?.status, error.response?.data);
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
-  }
-);
+  );
+} else {
+  // Production: No console logs, only essential error handling
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
+    }
+  );
+}
 
 export default api;
