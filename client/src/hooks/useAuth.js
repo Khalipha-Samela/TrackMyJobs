@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { authService } from '../services/authService';
+import { signIn, signUp, signOut, getCurrentUser } from '../services/supabase';
 
 const AuthContext = createContext();
 
@@ -8,41 +8,34 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
+    checkUser();
   }, []);
 
-  const checkAuth = async () => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-        // Verify token with backend
-        await authService.verify();
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        logout();
-      }
-    }
+  const checkUser = async () => {
+    const user = await getCurrentUser();
+    setUser(user);
     setLoading(false);
   };
 
   const login = async (email, password) => {
-    const response = await authService.login(email, password);
-    setUser(response.user);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    return response;
+    const data = await signIn(email, password);
+    setUser(data.user);
+    return data;
   };
 
-  const logout = () => {
-    authService.logout();
+  const register = async (email, password, displayName) => {
+    const data = await signUp(email, password, displayName);
+    setUser(data.user);
+    return data;
+  };
+
+  const logout = async () => {
+    await signOut();
     setUser(null);
-    localStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

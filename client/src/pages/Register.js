@@ -1,8 +1,7 @@
-import React, { use, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
-import useTitle from '../hooks/useTitle';
 import { 
   FaBriefcase, 
   FaEnvelope, 
@@ -15,7 +14,6 @@ import {
 } from 'react-icons/fa';
 
 const Register = () => {
-  useTitle('TrackMyJobs - Register');
   const [formData, setFormData] = useState({
     display_name: '',
     email: '',
@@ -25,62 +23,12 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState({
-    score: 0,
-    label: '',
-    color: '#E5E5E5',
-    width: '0%'
-  });
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    if (name === 'password') {
-      checkPasswordStrength(value);
-    }
-  };
-
-  const checkPasswordStrength = (password) => {
-    let score = 0;
-    let label = '';
-    let color = '';
-    let width = '0%';
-    
-    if (!password) {
-      setPasswordStrength({ score: 0, label: '', color: '#E5E5E5', width: '0%' });
-      return;
-    }
-    
-    // Calculate score
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
-    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    
-    // Determine strength level
-    if (score <= 1) {
-      label = 'WEAK';
-      color = '#FF3B30';
-      width = '20%';
-    } else if (score === 2) {
-      label = 'FAIR';
-      color = '#FFD166';
-      width = '50%';
-    } else if (score === 3) {
-      label = 'GOOD';
-      color = '#118AB2';
-      width = '75%';
-    } else {
-      label = 'STRONG';
-      color = '#06D6A0';
-      width = '100%';
-    }
-    
-    setPasswordStrength({ score, label, color, width });
   };
 
   const validateForm = () => {
@@ -127,33 +75,12 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.email, // Using email as username
-          display_name: formData.display_name,
-          email: formData.email,
-          password: formData.password,
-          confirmPassword: formData.password_confirm
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Auto-login after successful registration
-        await login(formData.email, formData.password);
-        toast.success('Registration successful! Welcome to TrackMyJobs!');
-        navigate('/');
-      } else {
-        toast.error(data.message || 'Registration failed');
-      }
+      await register(formData.email, formData.password, formData.display_name);
+      toast.success('Registration successful! Welcome to TrackMyJobs!');
+      navigate('/');
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('Failed to connect to server. Please try again.');
+      toast.error(error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -175,7 +102,7 @@ const Register = () => {
 
           <div className="auth-divider"></div>
 
-          <form onSubmit={handleSubmit} id="registerForm" noValidate>
+          <form onSubmit={handleSubmit} noValidate>
             <div className="field">
               <label className="field-label" htmlFor="display_name">
                 Display Name <span className="req">*</span>
@@ -232,7 +159,7 @@ const Register = () => {
                   className="field-input"
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder="Create a password"
+                  placeholder="Create a password (min. 8 characters)"
                   autoComplete="new-password"
                   minLength="8"
                   required
@@ -247,23 +174,6 @@ const Register = () => {
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
-              
-              {formData.password && (
-                <div className="pw-strength visible">
-                  <div className="pw-strength-bar">
-                    <div 
-                      className="pw-strength-fill" 
-                      style={{ 
-                        width: passwordStrength.width,
-                        background: passwordStrength.color
-                      }}
-                    ></div>
-                  </div>
-                  <div className="pw-strength-label" style={{ color: passwordStrength.color }}>
-                    {passwordStrength.label}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="field">
@@ -310,15 +220,7 @@ const Register = () => {
             </div>
 
             <button type="submit" className="auth-submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i> CREATING ACCOUNT...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-user-plus"></i> CREATE ACCOUNT
-                </>
-              )}
+              {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
             </button>
           </form>
 

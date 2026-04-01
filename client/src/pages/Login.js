@@ -3,10 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { FaBriefcase, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaRocket } from 'react-icons/fa';
-import useTitle from '../hooks/useTitle';
 
 const Login = () => {
-  useTitle('TrackMyJobs - Login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +33,7 @@ const Login = () => {
       toast.success('Login successful!');
       navigate('/');
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = error.message || 'Login failed';
       toast.error(message);
     } finally {
       setLoading(false);
@@ -45,16 +43,13 @@ const Login = () => {
   const handleDemoLogin = async () => {
     setDemoLoading(true);
     try {
-      // Fill credentials
       setEmail(demoCredentials.email);
       setPassword(demoCredentials.password);
-      
-      // Login
       await login(demoCredentials.email, demoCredentials.password);
       toast.success('Welcome to TrackMyJobs! 🎉');
       navigate('/');
     } catch (error) {
-      const message = error.response?.data?.message || 'Demo login failed';
+      const message = error.message || 'Demo login failed';
       toast.error(message);
     } finally {
       setDemoLoading(false);

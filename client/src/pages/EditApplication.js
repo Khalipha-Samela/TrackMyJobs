@@ -1,9 +1,8 @@
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { applicationService } from '../services/applicationService';
+import { useAuth } from '../hooks/useAuth';
+import { getApplicationById, updateApplication, deleteApplication, downloadCV } from '../services/supabase';
 import toast from 'react-hot-toast';
-import useTitle from '../hooks/useTitle';
 import { 
   FaArrowLeft, 
   FaSave, 
@@ -22,10 +21,11 @@ import {
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const EditApplication = () => {
-  useTitle('TrackMyJobs - Edit Application');
   const { id } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [formData, setFormData] = useState({
     company_name: '',
     job_title: '',
@@ -39,26 +39,23 @@ const EditApplication = () => {
   const [removeCv, setRemoveCv] = useState(false);
   const [existingCv, setExistingCv] = useState(null);
 
-  // Fetch application data
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['application', id],
-    queryFn: () => applicationService.getById(id)
-  });
-
   useEffect(() => {
-    if (data?.data) {
-      const app = data.data;
-      // Format date to YYYY-MM-DD for input[type="date"]
-      const formattedDate = app.application_date ? new Date(app.application_date).toISOString().split('T')[0] : '';
+    fetchApplication();
+  }, [id]);
+
+  const fetchApplication = async () => {
+    try {
+      const app = await getApplicationById(id, user.id);
       
       setFormData({
         company_name: app.company_name,
         job_title: app.job_title,
         job_link: app.job_link || '',
-        application_date: formattedDate,
+        application_date: app.application_date,
         status: app.status,
         notes: app.notes || ''
       });
+      
       if (app.cv_filename) {
         setExistingCv({
           filename: app.cv_filename,
@@ -67,23 +64,14 @@ const EditApplication = () => {
           mime_type: app.cv_mime_type
         });
       }
-    }
-  }, [data]);
-
-  const mutation = useMutation({
-    mutationFn: (data) => applicationService.update(id, data.formData, data.file, data.removeCv),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['applications']);
-      queryClient.invalidateQueries(['application', id]);
-      toast.success('Application updated successfully!');
+    } catch (error) {
+      console.error('Error fetching application:', error);
+      toast.error('Failed to load application');
       navigate('/');
-    },
-    onError: (error) => {
-      console.error('Update error:', error);
-      const message = error.response?.data?.message || 'Failed to update application';
-      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -123,36 +111,45 @@ const EditApplication = () => {
   };
 
   const handleRemoveCv = () => {
-      setRemoveCv(true);
-      setCvFile(null);
-      setFilePreview(null);
-    };
+    setRemoveCv(true);
+    setCvFile(null);
+    setFilePreview(null);
+  };
 
-    const getFileIcon = (type) => {
-      if (type === 'application/pdf') return <FaFilePdf />;
-      if (type?.includes('word')) return <FaFileWord />;
-      return <FaFile />;
-    };
+  const handleDownload = async () => {
+    if (!existingCv) return;
+    
+    try {
+      toast.loading('Downloading CV...', { id: 'download' });
+      await downloadCV(existingCv.filename, existingCv.original_name);
+      toast.success(`Downloaded: ${existingCv.original_name}`, { id: 'download' });
+    } catch (error) {
+      toast.error('Failed to download CV', { id: 'download' });
+    }
+  };
 
-    const formatFileSize = (bytes) => {
-      if (!bytes) return '';
-      if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-      if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
-      if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
-      return bytes + ' bytes';
-    };
+  const getFileIcon = (type) => {
+    if (type === 'application/pdf') return <FaFilePdf />;
+    if (type?.includes('word')) return <FaFileWord />;
+    return <FaFile />;
+  };
 
-    const handleSubmit = async (e) => {
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+    if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return bytes + ' bytes';
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-  
-    console.log('Form data before submit:', formData);
-  
-    // Validation
-    if (!formData.company_name?.trim()) {
+    
+    if (!formData.company_name.trim()) {
       toast.error('Company name is required');
       return;
     }
-    if (!formData.job_title?.trim()) {
+    if (!formData.job_title.trim()) {
       toast.error('Job title is required');
       return;
     }
@@ -160,8 +157,7 @@ const EditApplication = () => {
       toast.error('Application date is required');
       return;
     }
-  
-    // Prepare data for submission - only include fields that have values
+    
     const submitData = {
       company_name: formData.company_name,
       job_title: formData.job_title,
@@ -170,56 +166,26 @@ const EditApplication = () => {
       status: formData.status,
       notes: formData.notes || null
     };
-  
-    console.log('Submitting update data:', submitData);
-    console.log('New CV file:', cvFile);
-    console.log('Remove CV:', removeCv);
-  
+    
+    setUpdating(true);
     const loadingToast = toast.loading('Updating application...');
-  
+    
     try {
-      await applicationService.update(id, submitData, cvFile, removeCv);
+      await updateApplication(id, user.id, submitData, cvFile, removeCv);
       toast.success('Application updated successfully!', { id: loadingToast });
       navigate('/');
     } catch (error) {
       console.error('Update error:', error);
-      toast.error(error.response?.data?.message || 'Failed to update application', { id: loadingToast });
-    }
-  };
-
-  const handleReset = () => {
-    if (data?.data) {
-      const app = data.data;
-      const formattedDate = app.application_date ? new Date(app.application_date).toISOString().split('T')[0] : '';
-      setFormData({
-        company_name: app.company_name,
-        job_title: app.job_title,
-        job_link: app.job_link || '',
-        application_date: formattedDate,
-        status: app.status,
-        notes: app.notes || ''
-      });
-      setCvFile(null);
-      setFilePreview(null);
-      setRemoveCv(false);
-      toast.success('Form reset to original values');
-    }
-  };
-
-  const handleDownload = async () => {
-    try {
-      await applicationService.downloadCV(id);
-      toast.success(`Downloading ${existingCv?.original_name}`);
-    } catch (error) {
-      toast.error('Failed to download CV');
+      toast.error(error.message || 'Failed to update application', { id: loadingToast });
+    } finally {
+      setUpdating(false);
     }
   };
 
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete this application? This action cannot be undone.`)) {
       try {
-        await applicationService.delete(id);
-        queryClient.invalidateQueries(['applications']);
+        await deleteApplication(id, user.id);
         toast.success('Application deleted successfully');
         navigate('/');
       } catch (error) {
@@ -228,8 +194,15 @@ const EditApplication = () => {
     }
   };
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <div className="error-message">Error loading application</div>;
+  const handleReset = () => {
+    fetchApplication();
+    setCvFile(null);
+    setFilePreview(null);
+    setRemoveCv(false);
+    toast.success('Form reset to original values');
+  };
+
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div className="container">
@@ -246,7 +219,7 @@ const EditApplication = () => {
           <p>Update application details</p>
         </div>
 
-        <form onSubmit={handleSubmit} encType="multipart/form-data">
+        <form onSubmit={handleSubmit}>
           {/* Company & Position Section */}
           <div className="form-section">
             <div className="form-section-title">COMPANY & POSITION</div>
@@ -260,7 +233,6 @@ const EditApplication = () => {
                 name="company_name"
                 value={formData.company_name}
                 onChange={handleInputChange}
-                placeholder="e.g., TECH CORP INC."
                 required
               />
             </div>
@@ -274,7 +246,6 @@ const EditApplication = () => {
                 name="job_title"
                 value={formData.job_title}
                 onChange={handleInputChange}
-                placeholder="e.g., SENIOR FULL-STACK DEVELOPER"
                 required
               />
             </div>
@@ -286,7 +257,6 @@ const EditApplication = () => {
                 name="job_link"
                 value={formData.job_link}
                 onChange={handleInputChange}
-                placeholder="https://company.com/careers/job-id"
               />
             </div>
           </div>
@@ -323,7 +293,6 @@ const EditApplication = () => {
           <div className="form-section">
             <div className="form-section-title">CV / RESUME</div>
             
-            {/* Existing CV */}
             {existingCv && !removeCv && (
               <div className="existing-cv">
                 <div className="existing-cv-header">
@@ -353,7 +322,6 @@ const EditApplication = () => {
               </div>
             )}
             
-            {/* New CV Upload */}
             {(!existingCv || removeCv) && (
               <div className="form-group">
                 <label className="form-label">
@@ -399,7 +367,6 @@ const EditApplication = () => {
                   <ul>
                     <li>Accepted formats: PDF, DOC, DOCX</li>
                     <li>Maximum file size: 5 MB</li>
-                    <li>Name your file appropriately (e.g., John_Doe_CV.pdf)</li>
                   </ul>
                 </div>
               </div>
@@ -417,15 +384,15 @@ const EditApplication = () => {
                 rows="6"
                 value={formData.notes}
                 onChange={handleInputChange}
-                placeholder="Add any notes about the application, contact person, follow-up dates, salary discussions, technical requirements, etc."
+                placeholder="Add any notes about the application..."
               />
             </div>
           </div>
 
           {/* Form Actions */}
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={mutation.isLoading}>
-              <FaSave /> {mutation.isLoading ? 'SAVING...' : 'SAVE CHANGES'}
+            <button type="submit" className="btn btn-primary" disabled={updating}>
+              <FaSave /> {updating ? 'SAVING...' : 'SAVE CHANGES'}
             </button>
             <button type="button" className="btn btn-secondary" onClick={handleReset}>
               <FaUndo /> RESET FORM
@@ -436,7 +403,6 @@ const EditApplication = () => {
           </div>
         </form>
 
-        {/* Danger Zone */}
         <div className="delete-confirm">
           <h3><FaTrash /> DANGER ZONE</h3>
           <p>This action cannot be undone. This will permanently delete this application.</p>

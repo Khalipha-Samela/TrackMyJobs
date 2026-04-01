@@ -1,9 +1,8 @@
-import React, { use, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { applicationService } from '../services/applicationService';
+import { useAuth } from '../hooks/useAuth';
+import { createApplication } from '../services/supabase';
 import toast from 'react-hot-toast';
-import useTitle from '../hooks/useTitle';
 import { 
   FaArrowLeft, 
   FaSave, 
@@ -18,9 +17,10 @@ import {
 } from 'react-icons/fa';
 
 const AddApplication = () => {
-  useTitle('TrackMyJobs - Add Application');
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     company_name: '',
     job_title: '',
@@ -31,19 +31,6 @@ const AddApplication = () => {
   });
   const [cvFile, setCvFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
-
-  const mutation = useMutation({
-    mutationFn: (data) => applicationService.create(data.formData, data.file),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['applications']);
-      toast.success('Application added successfully!');
-      navigate('/');
-    },
-    onError: (error) => {
-      const message = error.response?.data?.message || 'Failed to add application';
-      toast.error(message);
-    }
-  });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -95,7 +82,20 @@ const AddApplication = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+    
+    if (!formData.company_name.trim()) {
+      toast.error('Company name is required');
+      return;
+    }
+    if (!formData.job_title.trim()) {
+      toast.error('Job title is required');
+      return;
+    }
+    if (!formData.application_date) {
+      toast.error('Application date is required');
+      return;
+    }
+    
     const submitData = {
       company_name: formData.company_name,
       job_title: formData.job_title,
@@ -104,13 +104,19 @@ const AddApplication = () => {
       status: formData.status,
       notes: formData.notes || null
     };
-
+    
+    setLoading(true);
+    const loadingToast = toast.loading('Creating application...');
+    
     try {
-      await applicationService.create(submitData, cvFile);
-      toast.success('Application added!');
+      await createApplication(user.id, submitData, cvFile);
+      toast.success('Application added successfully!', { id: loadingToast });
       navigate('/');
     } catch (error) {
-      toast.error('Failed to add application');
+      console.error('Create error:', error);
+      toast.error(error.message || 'Failed to add application', { id: loadingToast });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -129,7 +135,7 @@ const AddApplication = () => {
           <p>TRACK A NEW JOB APPLICATION WITH CV/RESUME</p>
         </div>
 
-        <form onSubmit={handleSubmit} encType="multipart/form-data">
+        <form onSubmit={handleSubmit}>
           {/* Company & Position Section */}
           <div className="form-section">
             <div className="form-section-title">COMPANY & POSITION</div>
@@ -249,7 +255,6 @@ const AddApplication = () => {
                   <li>Accepted formats: PDF, DOC, DOCX</li>
                   <li>Maximum file size: 5 MB</li>
                   <li>Name your file appropriately (e.g., John_Doe_CV.pdf)</li>
-                  <li>Ensure your contact information is up to date</li>
                 </ul>
               </div>
             </div>
@@ -273,8 +278,8 @@ const AddApplication = () => {
 
           {/* Form Actions */}
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={mutation.isLoading}>
-              <FaSave /> {mutation.isLoading ? 'SAVING...' : 'SAVE APPLICATION'}
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              <FaSave /> {loading ? 'SAVING...' : 'SAVE APPLICATION'}
             </button>
             <Link to="/" className="btn btn-secondary">
               <FaTimes /> CANCEL
