@@ -24,6 +24,8 @@ import {
   getApplicationsStats 
 } from '../services/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
+import StatusBadge from '../components/StatusBadge';
+import DateBadge from '../components/DateBadge';
 
 const Dashboard = () => {
   const [page, setPage] = useState(1);
@@ -61,7 +63,7 @@ const Dashboard = () => {
         totalPages: Math.ceil((count || 0) / limit)
       });
     } catch (error) {
-      // Silent fail - don't log errors to console in production
+      console.error('Error fetching applications:', error);
       toast.error('Failed to load applications');
     } finally {
       setLoading(false);
@@ -73,7 +75,7 @@ const Dashboard = () => {
       const statsData = await getApplicationsStats(user.id);
       setStats(statsData);
     } catch (error) {
-      // Silent fail
+      console.error('Error fetching stats:', error);
     }
   };
 
@@ -96,6 +98,7 @@ const Dashboard = () => {
       await downloadCV(filename, originalName);
       toast.success(`Downloaded: ${originalName}`, { id: 'download' });
     } catch (error) {
+      console.error('Download error:', error);
       toast.error('Failed to download CV', { id: 'download' });
     }
   };
@@ -108,6 +111,14 @@ const Dashboard = () => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+    if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return bytes + ' bytes';
   };
 
   const getStatusColor = (status) => {
@@ -123,8 +134,8 @@ const Dashboard = () => {
   // Filter applications based on search and status
   const filteredApplications = applications.filter(app => {
     const matchesSearch = searchTerm === '' || 
-      app.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.job_title?.toLowerCase().includes(searchTerm.toLowerCase());
+      app.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job_title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -152,7 +163,7 @@ const Dashboard = () => {
       </header>
 
       <div className="welcome-section">
-        <h2>Welcome back, {user?.display_name || user?.email?.split('@')[0]}! 👋</h2>
+        <h2>Welcome back, {user?.user_metadata?.display_name || user?.email?.split('@')[0]}! 👋</h2>
         <p>Track and manage all your job applications in one place</p>
       </div>
 
