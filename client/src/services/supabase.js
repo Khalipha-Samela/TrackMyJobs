@@ -1,7 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Get from environment variables
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+// Debug
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Key exists:', !!supabaseAnonKey);
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase credentials!');
+  // Show error on page for debugging
+  const errorDiv = document.createElement('div');
+  errorDiv.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: red; color: white; padding: 10px; text-align: center; z-index: 9999;';
+  errorDiv.innerHTML = '⚠️ Supabase credentials missing. Please check your .env file.';
+  document.body.appendChild(errorDiv);
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -12,7 +26,7 @@ export const login = async (email, password) => {
       .from('users')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
     
     if (error || !user) {
       throw new Error('Invalid email or password');
@@ -21,6 +35,7 @@ export const login = async (email, password) => {
     localStorage.setItem('trackmyjobs_user', JSON.stringify(user));
     return { user };
   } catch (error) {
+    console.error('Login error:', error);
     throw error;
   }
 };
@@ -31,7 +46,7 @@ export const register = async (email, password, displayName) => {
       .from('users')
       .insert([{
         email,
-        password_hash: 'demo_hash',
+        password_hash: 'temp_hash',
         display_name: displayName
       }])
       .select()
@@ -42,6 +57,7 @@ export const register = async (email, password, displayName) => {
     localStorage.setItem('trackmyjobs_user', JSON.stringify(user));
     return { user };
   } catch (error) {
+    console.error('Registration error:', error);
     throw error;
   }
 };
@@ -81,7 +97,7 @@ export const getApplicationById = async (id, userId) => {
     .select('*')
     .eq('id', id)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
   
   if (error) throw error;
   return data;
@@ -132,7 +148,7 @@ export const updateApplication = async (id, userId, applicationData, cvFile, rem
       .from('applications')
       .select('cv_filename')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     
     if (existing?.cv_filename) {
       await supabase.storage.from('cvs').remove([existing.cv_filename]);
@@ -148,7 +164,7 @@ export const updateApplication = async (id, userId, applicationData, cvFile, rem
       .from('applications')
       .select('cv_filename')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     
     if (existing?.cv_filename) {
       await supabase.storage.from('cvs').remove([existing.cv_filename]);
@@ -185,7 +201,7 @@ export const deleteApplication = async (id, userId) => {
     .from('applications')
     .select('cv_filename')
     .eq('id', id)
-    .single();
+    .maybeSingle();
   
   if (app?.cv_filename) {
     await supabase.storage.from('cvs').remove([app.cv_filename]);
