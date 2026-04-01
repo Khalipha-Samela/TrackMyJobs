@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { signIn, signUp, signOut, getCurrentUser } from '../services/supabase';
+import { login, register, logout, getCurrentUser } from '../services/supabase';
 
 const AuthContext = createContext();
 
@@ -17,25 +17,34 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
-  const login = async (email, password) => {
-    const data = await signIn(email, password);
-    setUser(data.user);
-    return data;
+  const signIn = async (email, password) => {
+    const { user } = await login(email, password);
+    setUser(user);
+    return { user };
   };
 
-  const register = async (email, password, displayName) => {
-    const data = await signUp(email, password, displayName);
-    setUser(data.user);
-    return data;
+  const signUp = async (email, password, displayName) => {
+    const { user } = await register(email, password, displayName);
+    setUser(user);
+    return { user };
   };
 
-  const logout = async () => {
-    await signOut();
+  const signOut = async () => {
+    await logout();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        loading, 
+        login: signIn, 
+        register: signUp, 
+        logout: signOut, 
+        isAuthenticated: !!user 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
