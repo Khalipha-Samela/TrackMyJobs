@@ -47,8 +47,15 @@ A modern, full-stack job application tracking system that helps you manage and m
 
 ```
 TrackMyJobs
+├─ .node-version
 ├─ .prettierrc
 ├─ client
+│  ├─ build
+│  │  ├─ favicon.ico
+│  │  ├─ logo192.png
+│  │  ├─ logo512.png
+│  │  ├─ manifest.json
+│  │  └─ robots.txt
 │  ├─ package-lock.json
 │  ├─ package.json
 │  ├─ public
@@ -70,7 +77,8 @@ TrackMyJobs
 │     │  ├─ PrivateRoute.js
 │     │  └─ StatusBadge.js
 │     ├─ hooks
-│     │  └─ useAuth.js
+│     │  ├─ useAuth.js
+│     │  └─ useTitle.js
 │     ├─ index.css
 │     ├─ index.js
 │     ├─ logo.svg
@@ -84,7 +92,8 @@ TrackMyJobs
 │     ├─ services
 │     │  ├─ api.js
 │     │  ├─ applicationService.js
-│     │  └─ authService.js
+│     │  ├─ authService.js
+│     │  └─ supabase.js
 │     ├─ setupTests.js
 │     └─ styles
 │        └─ index.css
@@ -98,10 +107,13 @@ TrackMyJobs
 ├─ package-lock.json
 ├─ package.json
 ├─ README.md
+├─ render.yaml
 └─ server
    ├─ config
    │  ├─ database.js
-   │  └─ multer.js
+   │  ├─ multer.js
+   │  ├─ supabase-storage.js
+   │  └─ supabase.js
    ├─ controllers
    │  ├─ applicationController.js
    │  └─ authController.js
@@ -114,12 +126,12 @@ TrackMyJobs
    │  └─ User.js
    ├─ package-lock.json
    ├─ package.json
-   ├─ render.yaml
    ├─ routes
    │  ├─ applicationRoutes.js
    │  └─ authRoutes.js
    ├─ server.js
-   └─ setup-render-db.js
+   ├─ setup-render-db.js
+   └─ uploads
 
 ```
 
@@ -401,5 +413,6 @@ npm install
 3. Commit your changes ```(git commit -m 'Add some AmazingFeature')```
 4. Push to the branch ```(git push origin feature/AmazingFeature)```
 5. Open a Pull Request
+
 
 
