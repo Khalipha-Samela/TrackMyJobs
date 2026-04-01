@@ -12,54 +12,62 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Only log in development
-if (isDevelopment) {
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      console.log(`📤 ${config.method.toUpperCase()} ${config.url}`);
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
+// Function to sanitize data (remove passwords)
+const sanitizeData = (data) => {
+  if (!data || typeof data !== 'object') return data;
+  
+  const sanitized = { ...data };
+  if (sanitized.password) {
+    sanitized.password = '********';
+  }
+  if (sanitized.confirmPassword) {
+    sanitized.confirmPassword = '********';
+  }
+  return sanitized;
+};
 
-  api.interceptors.response.use(
-    (response) => {
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Log only in development, and sanitize sensitive data
+    if (isDevelopment) {
+      const logData = config.data ? sanitizeData(config.data) : undefined;
+      console.log(`📤 ${config.method.toUpperCase()} ${config.url}`, logData);
+    }
+    
+    return config;
+  },
+  (error) => {
+    if (isDevelopment) console.error('Request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => {
+    if (isDevelopment) {
       console.log(`📥 ${response.status} ${response.config.url}`);
-      return response;
-    },
-    (error) => {
+    }
+    return response;
+  },
+  (error) => {
+    if (isDevelopment) {
       console.error('API Error:', error.response?.status, error.response?.data);
-      return Promise.reject(error);
     }
-  );
-} else {
-  // Production: No console logs, only essential error handling
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-  api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      }
-      return Promise.reject(error);
+    
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     }
-  );
-}
+    return Promise.reject(error);
+  }
+);
 
 export default api;

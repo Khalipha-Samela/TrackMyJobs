@@ -14,7 +14,7 @@ export const applicationService = {
         stats: response.data.stats || { total: 0, applied: 0, interview: 0, rejected: 0, offer: 0 }
       };
     } catch (error) {
-      if (isDevelopment) console.error('Error fetching applications:', error);
+      if (isDevelopment) console.error('Error fetching applications:', error.message);
       throw error;
     }
   },
@@ -24,7 +24,7 @@ export const applicationService = {
       const response = await api.get(`/applications/${id}`);
       return response.data;
     } catch (error) {
-      if (isDevelopment) console.error('Error fetching application:', error);
+      if (isDevelopment) console.error('Error fetching application:', error.message);
       throw error;
     }
   },
@@ -48,7 +48,7 @@ export const applicationService = {
       });
       return response.data;
     } catch (error) {
-      if (isDevelopment) console.error('Create error:', error);
+      if (isDevelopment) console.error('Create error:', error.message);
       throw error;
     }
   },
@@ -73,7 +73,7 @@ export const applicationService = {
       });
       return response.data;
     } catch (error) {
-      if (isDevelopment) console.error('Update error:', error);
+      if (isDevelopment) console.error('Update error:', error.message);
       throw error;
     }
   },
@@ -83,7 +83,7 @@ export const applicationService = {
       const response = await api.delete(`/applications/${id}`);
       return response.data;
     } catch (error) {
-      if (isDevelopment) console.error('Delete error:', error);
+      if (isDevelopment) console.error('Delete error:', error.message);
       throw error;
     }
   },
@@ -128,7 +128,7 @@ export const applicationService = {
       
       return { success: true, filename };
     } catch (error) {
-      if (isDevelopment) console.error('Download error:', error);
+      if (isDevelopment) console.error('Download error:', error.message);
       throw error;
     }
   }
