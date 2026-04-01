@@ -14,7 +14,9 @@ import {
   FaTrophy,
   FaSearch,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaListAlt,
+  FaComments
 } from 'react-icons/fa';
 import { useAuth } from '../hooks/useAuth';
 import { 
@@ -24,8 +26,6 @@ import {
   getApplicationsStats 
 } from '../services/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
-import StatusBadge from '../components/StatusBadge';
-import DateBadge from '../components/DateBadge';
 
 const Dashboard = () => {
   const [page, setPage] = useState(1);
@@ -44,7 +44,7 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const limit = 10;
+  const limit = 5; // Number of applications per page
 
   useEffect(() => {
     if (user) {
@@ -121,21 +121,21 @@ const Dashboard = () => {
     return bytes + ' bytes';
   };
 
-  const getStatusColor = (status) => {
+  const getStatusClass = (status) => {
     switch(status) {
-      case 'Applied': return { bg: '#EFF6FF', text: '#1E40AF', dot: '#3B82F6' };
-      case 'Interview': return { bg: '#FEF3C7', text: '#92400E', dot: '#F59E0B' };
-      case 'Rejected': return { bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444' };
-      case 'Offer': return { bg: '#ECFDF5', text: '#065F46', dot: '#10B981' };
-      default: return { bg: '#F3F4F6', text: '#374151', dot: '#6B7280' };
+      case 'Applied': return 'status-applied';
+      case 'Interview': return 'status-interview';
+      case 'Rejected': return 'status-rejected';
+      case 'Offer': return 'status-offer';
+      default: return '';
     }
   };
 
   // Filter applications based on search and status
   const filteredApplications = applications.filter(app => {
     const matchesSearch = searchTerm === '' || 
-      app.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.job_title.toLowerCase().includes(searchTerm.toLowerCase());
+      app.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job_title?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -143,208 +143,234 @@ const Dashboard = () => {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-header">
-        <div className="header-content">
-          <div className="logo-section">
-            <div className="logo-icon">
-              <FaBriefcase />
-            </div>
-            <div className="logo-text">
-              <h1>TrackMyJobs</h1>
-              <p>Job Application Tracker</p>
-            </div>
-          </div>
-          <button className="logout-btn" onClick={handleLogout}>
-            <FaSignOutAlt />
-            <span>Logout</span>
-          </button>
-        </div>
+    <div className="container">
+      {/* Header */}
+      <header className="header">
+        <h1>
+          <FaBriefcase />
+          TRACKMYJOBS
+        </h1>
+        <p>TRACK YOUR JOB SEARCH WITH BOLD, UNAPOLOGETIC CLARITY</p>
       </header>
-
-      <div className="welcome-section">
-        <h2>Welcome back, {user?.user_metadata?.display_name || user?.email?.split('@')[0]}! 👋</h2>
-        <p>Track and manage all your job applications in one place</p>
-      </div>
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card total">
+        <div className="stat-card">
           <div className="stat-icon"><FaBriefcase /></div>
-          <div className="stat-info">
-            <h3>{stats.total}</h3>
-            <p>Total Applications</p>
-          </div>
+          <div className="stat-number">{stats.total}</div>
+          <div className="stat-label">Total Applications</div>
         </div>
-        <div className="stat-card applied">
-          <div className="stat-icon"><FaBriefcase /></div>
-          <div className="stat-info">
-            <h3>{stats.applied}</h3>
-            <p>Applied</p>
-          </div>
-        </div>
-        <div className="stat-card interview">
+        <div className="stat-card">
           <div className="stat-icon"><FaCalendarAlt /></div>
-          <div className="stat-info">
-            <h3>{stats.interview}</h3>
-            <p>Interview</p>
-          </div>
+          <div className="stat-number">{stats.applied}</div>
+          <div className="stat-label">Applied</div>
         </div>
-        <div className="stat-card rejected">
+        <div className="stat-card">
+          <div className="stat-icon"><FaComments /></div>
+          <div className="stat-number">{stats.interview}</div>
+          <div className="stat-label">In Interview</div>
+        </div>
+        <div className="stat-card">
           <div className="stat-icon"><FaTimesCircle /></div>
-          <div className="stat-info">
-            <h3>{stats.rejected}</h3>
-            <p>Rejected</p>
-          </div>
+          <div className="stat-number">{stats.rejected}</div>
+          <div className="stat-label">Rejected</div>
         </div>
-        <div className="stat-card offer">
+        <div className="stat-card">
           <div className="stat-icon"><FaTrophy /></div>
-          <div className="stat-info">
-            <h3>{stats.offer}</h3>
-            <p>Offers</p>
-          </div>
+          <div className="stat-number">{stats.offer}</div>
+          <div className="stat-label">Offers Received</div>
         </div>
       </div>
 
-      {/* Actions Bar */}
-      <div className="actions-bar">
-        <button className="btn-primary" onClick={() => navigate('/add')}>
-          <FaPlus /> Add New Application
+      {/* Actions */}
+      <div className="main-actions">
+        <button className="btn btn-primary" onClick={() => navigate('/add')}>
+          <FaPlus /> ADD NEW APPLICATION
         </button>
-        
-        <div className="filters">
-          <div className="search-box">
-            <FaSearch />
-            <input
-              type="text"
-              placeholder="Search by company or position..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <select 
-            className="status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="Applied">Applied</option>
-            <option value="Interview">Interview</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Offer">Offer</option>
-          </select>
-        </div>
+        <button className="btn btn-secondary" onClick={handleLogout}>
+          <FaSignOutAlt /> LOGOUT
+        </button>
       </div>
 
-      {/* Applications Grid */}
-      <div className="applications-grid">
-        <div className="grid-header">
-          <h3>Your Applications</h3>
-          <span>{filteredApplications.length} applications</span>
+      {/* Applications Container */}
+      <div className="applications-container">
+        <div className="table-header">
+          <h2><FaListAlt /> YOUR APPLICATIONS</h2>
+          <div className="count-badge">{pagination.total} RECORDS</div>
         </div>
-        
+
         {filteredApplications.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon"><FaBriefcase /></div>
-            <h3>No applications found</h3>
-            <p>Start tracking your job applications by adding your first one</p>
-            <button className="btn-primary" onClick={() => navigate('/add')}>
-              <FaPlus /> Add Application
+            <div className="empty-state-icon"><FaBriefcase /></div>
+            <h3>NO APPLICATIONS FOUND</h3>
+            <p>Your job search dashboard is empty. Start tracking your applications to see them here.</p>
+            <button className="btn btn-primary" onClick={() => navigate('/add')}>
+              <FaPlus /> ADD YOUR FIRST APPLICATION
             </button>
           </div>
         ) : (
-          <div className="applications-list">
-            {filteredApplications.map((app) => {
-              const statusStyle = getStatusColor(app.status);
-              return (
-                <div key={app.id} className="application-card">
-                  <div className="card-header">
-                    <div className="company-info">
-                      <h4>{app.company_name}</h4>
-                      <p>{app.job_title}</p>
-                    </div>
-                    <div className="status-badge" style={{ background: statusStyle.bg, color: statusStyle.text }}>
-                      <span className="status-dot" style={{ background: statusStyle.dot }}></span>
-                      {app.status}
-                    </div>
-                  </div>
-                  
-                  <div className="card-details">
-                    <div className="detail-item">
-                      <FaCalendarAlt />
-                      <span>Applied: {formatDate(app.application_date)}</span>
-                    </div>
-                    {app.job_link && (
-                      <a href={app.job_link} target="_blank" rel="noopener noreferrer" className="detail-link">
-                        <FaExternalLinkAlt />
-                        <span>View Job Posting</span>
-                      </a>
-                    )}
-                  </div>
-                  
-                  {app.notes && (
-                    <div className="card-notes">
-                      <p>{app.notes.length > 120 ? app.notes.substring(0, 120) + '...' : app.notes}</p>
-                    </div>
-                  )}
-                  
-                  <div className="card-actions">
-                    {app.cv_filename && (
-                      <button 
-                        className="action-btn download"
-                        onClick={() => handleDownload(app.cv_filename, app.cv_original_name)}
-                        title="Download CV"
-                      >
-                        <FaFileDownload />
-                        <span>CV</span>
-                      </button>
-                    )}
-                    <button 
-                      className="action-btn edit"
-                      onClick={() => navigate(`/edit/${app.id}`)}
-                      title="Edit"
-                    >
-                      <FaEdit />
-                      <span>Edit</span>
-                    </button>
-                    <button 
-                      className="action-btn delete"
-                      onClick={() => handleDelete(app.id, app.company_name)}
-                      title="Delete"
-                    >
-                      <FaTrash />
-                      <span>Delete</span>
-                    </button>
-                  </div>
+          <>
+            <div className="applications-table-wrapper">
+              <table className="applications-table">
+                <thead>
+                  <tr>
+                    <th>COMPANY & POSITION</th>
+                    <th>DATE APPLIED</th>
+                    <th>STATUS</th>
+                    <th>CV / RESUME</th>
+                    <th>NOTES</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredApplications.map((app, index) => (
+                    <tr key={app.id} style={{ '--row-index': index }}>
+                      <td className="company-cell" data-label="Company & Position">
+                        <div className="company-name">{app.company_name}</div>
+                        <div className="job-title">{app.job_title}</div>
+                        {app.job_link && (
+                          <a href={app.job_link} target="_blank" rel="noopener noreferrer" className="job-link">
+                            <FaExternalLinkAlt /> VIEW JOB POSTING
+                          </a>
+                        )}
+                      </td>
+                      <td data-label="Date Applied">
+                        <div className="date-badge">
+                          <span className="date-day">{new Date(app.application_date).getDate()}</span>
+                          <span className="date-month">{new Date(app.application_date).toLocaleString('default', { month: 'short', year: 'numeric' })}</span>
+                        </div>
+                      </td>
+                      <td data-label="Status">
+                        <span className={`status-badge ${getStatusClass(app.status)}`}>
+                          <span className="status-indicator"></span>
+                          {app.status}
+                        </span>
+                      </td>
+                      <td data-label="CV / Resume">
+                        {app.cv_filename ? (
+                          <div className="cv-container">
+                            <button 
+                              className="cv-badge"
+                              onClick={() => handleDownload(app.cv_filename, app.cv_original_name)}
+                            >
+                              <FaFileDownload />
+                              <span>
+                                {app.cv_original_name?.length > 20 
+                                  ? app.cv_original_name.substring(0, 20) + '...' 
+                                  : app.cv_original_name}
+                              </span>
+                            </button>
+                            <div className="cv-size">
+                              {app.cv_size ? formatFileSize(app.cv_size) : ''}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="no-cv">
+                            <FaTimesCircle /> No CV uploaded
+                          </div>
+                        )}
+                      </td>
+                      <td data-label="Notes">
+                        <div className="notes-container">
+                          {app.notes ? (
+                            <>
+                              <div>{app.notes.substring(0, 80)}</div>
+                              {app.notes.length > 80 && (
+                                <button 
+                                  className="btn-icon-view"
+                                  onClick={() => navigate(`/edit/${app.id}#notes`)}
+                                >
+                                  VIEW FULL NOTE
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <div className="no-notes">No notes added</div>
+                          )}
+                        </div>
+                      </td>
+                      <td data-label="Actions">
+                        <div className="action-buttons">
+                          <button 
+                            className="btn-icon btn-icon-edit"
+                            onClick={() => navigate(`/edit/${app.id}`)}
+                            title="Edit Application"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button 
+                            className="btn-icon btn-icon-delete"
+                            onClick={() => handleDelete(app.id, app.company_name)}
+                            title="Delete Application"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="pagination-container">
+                <div className="pagination-info">
+                  Showing {(page - 1) * limit + 1} - {Math.min(page * limit, pagination.total)} of {pagination.total} applications
                 </div>
-              );
-            })}
-          </div>
+                <ul className="pagination">
+                  <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
+                    <button 
+                      className="page-link"
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
+                    >
+                      <FaChevronLeft /> PREV
+                    </button>
+                  </li>
+                  {[...Array(pagination.totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    // Show first page, last page, and pages around current page
+                    if (
+                      pageNum === 1 ||
+                      pageNum === pagination.totalPages ||
+                      (pageNum >= page - 1 && pageNum <= page + 1)
+                    ) {
+                      return (
+                        <li key={pageNum} className={`page-item ${page === pageNum ? 'active' : ''}`}>
+                          <button className="page-link" onClick={() => setPage(pageNum)}>
+                            {pageNum}
+                          </button>
+                        </li>
+                      );
+                    } else if (
+                      (pageNum === 2 && page > 3) ||
+                      (pageNum === pagination.totalPages - 1 && page < pagination.totalPages - 2)
+                    ) {
+                      return <li key={pageNum} className="page-ellipsis">...</li>;
+                    }
+                    return null;
+                  })}
+                  <li className={`page-item ${page === pagination.totalPages ? 'disabled' : ''}`}>
+                    <button 
+                      className="page-link"
+                      onClick={() => setPage(page + 1)}
+                      disabled={page === pagination.totalPages}
+                    >
+                      NEXT <FaChevronRight />
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </>
         )}
-        
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="pagination">
-            <button 
-              className="page-btn"
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1}
-            >
-              <FaChevronLeft /> Previous
-            </button>
-            <span className="page-info">
-              Page {page} of {pagination.totalPages}
-            </span>
-            <button 
-              className="page-btn"
-              onClick={() => setPage(page + 1)}
-              disabled={page === pagination.totalPages}
-            >
-              Next <FaChevronRight />
-            </button>
-          </div>
-        )}
+      </div>
+
+      {/* Footer Note */}
+      <div className="footer-note">
+        <p><strong>TRACK. APPLY. SUCCEED.</strong> • Page {page} of {pagination.totalPages} • {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
       </div>
     </div>
   );
