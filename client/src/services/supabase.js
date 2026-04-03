@@ -1,41 +1,45 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get from environment variables
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabaseUrl = 'https://mxfyfjirrqwkwuwswosv.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14ZnlmamlycnF3a3d1d3N3b3N2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDk3NTIsImV4cCI6MjA5MDE4NTc1Mn0.VCWTK_ynIMptbS5sbfDV1TYTctf-WjfRY31lYT2XGj0'; // Replace with your actual key
 
 // Debug
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Key exists:', !!supabaseAnonKey);
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase credentials!');
-  // Show error on page for debugging
-  const errorDiv = document.createElement('div');
-  errorDiv.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: red; color: white; padding: 10px; text-align: center; z-index: 9999;';
-  errorDiv.innerHTML = '⚠️ Supabase credentials missing. Please check your .env file.';
-  document.body.appendChild(errorDiv);
-}
+console.log('🔧 Using hardcoded Supabase URL:', supabaseUrl);
+console.log('🔧 Using hardcoded anon key:', supabaseAnonKey ? 'Present' : 'Missing');
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Auth functions
 export const login = async (email, password) => {
   try {
+    console.log('🔐 Attempting login for:', email);
+    
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
       .eq('email', email)
       .maybeSingle();
     
-    if (error || !user) {
+    if (error) {
+      console.error('Supabase error:', error);
+      throw new Error('Database error');
+    }
+    
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
+    
+    // For demo user, check password
+    if (email === 'demo@trackmyjobs.com' && password !== 'changeme123') {
       throw new Error('Invalid email or password');
     }
     
     localStorage.setItem('trackmyjobs_user', JSON.stringify(user));
+    console.log('✅ Login successful for:', email);
     return { user };
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login error:', error.message);
     throw error;
   }
 };
