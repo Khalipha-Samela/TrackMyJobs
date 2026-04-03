@@ -1,19 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get from environment variables
-const supabaseUrl = 'https://mxfyfjirrqwkwuwswosv.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14ZnlmamlycnF3a3d1d3N3b3N2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDk3NTIsImV4cCI6MjA5MDE4NTc1Mn0.VCWTK_ynIMptbS5sbfDV1TYTctf-WjfRY31lYT2XGj0'; // Replace with your actual key
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-// Debug
-console.log('🔧 Using hardcoded Supabase URL:', supabaseUrl);
-console.log('🔧 Using hardcoded anon key:', supabaseAnonKey ? 'Present' : 'Missing');
+// Validate
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(' Missing Supabase credentials! Check your environment variables.');
+  throw new Error('Supabase credentials are missing. Please check your .env file.');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Auth functions
 export const login = async (email, password) => {
   try {
-    console.log('🔐 Attempting login for:', email);
+    console.log(' Attempting login for:', email);
     
     const { data: user, error } = await supabase
       .from('users')
@@ -36,7 +38,7 @@ export const login = async (email, password) => {
     }
     
     localStorage.setItem('trackmyjobs_user', JSON.stringify(user));
-    console.log('✅ Login successful for:', email);
+    console.log(' Login successful for:', email);
     return { user };
   } catch (error) {
     console.error('Login error:', error.message);
