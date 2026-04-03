@@ -5,7 +5,7 @@
 
 [build.environment]
   REACT_APP_SUPABASE_URL = "https://mxfyfjirrqwkwuwswosv.supabase.co"
-  REACT_APP_SUPABASE_ANON_KEY = "${REACT_APP_SUPABASE_ANON_KEY}"
+  REACT_APP_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14ZnlmamlycnF3a3d1d3N3b3N2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDk3NTIsImV4cCI6MjA5MDE4NTc1Mn0.VCWTK_ynIMptbS5sbfDV1TYTctf-WjfRY31lYT2XGj0"
   REACT_APP_API_URL = "https://trackmyjobs-api.onrender.com/api"
   NODE_VERSION = "20"
 
